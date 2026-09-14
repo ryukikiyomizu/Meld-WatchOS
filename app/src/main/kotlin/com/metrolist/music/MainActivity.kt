@@ -9,6 +9,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
@@ -197,6 +198,7 @@ import com.metrolist.music.utils.reportException
 import com.metrolist.spotify.Spotify
 
 import com.metrolist.music.utils.setAppLocale
+import com.metrolist.music.utils.withWatchUiScale
 import com.metrolist.music.viewmodels.HomeViewModel
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -235,6 +237,16 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var listenTogetherManager: com.metrolist.music.listentogether.ListenTogetherManager
+
+    /**
+     * Scale down the display density before anything is inflated so the
+     * phone-oriented UI renders small enough to fit on a Wear OS watch
+     * display (e.g. 44mm). Applied here so it affects the activity window
+     * as well as Compose dialogs, popups and menus.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.withWatchUiScale())
+    }
 
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null

@@ -210,10 +210,14 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
+        <!-- Disabled: density scaling for the watch UI is applied once in
+             MainActivity.attachBaseContext (see utils/WatchUi.kt), which also
+             honors the density preset from the appearance settings. Keeping
+             this provider enabled would apply a second, conflicting scale. -->
         <provider
             android:name="com.dpi.DensityScaler"
             android:authorities="${applicationId}.com.dpi.DensityScaler"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="false" />
 
         <activity
