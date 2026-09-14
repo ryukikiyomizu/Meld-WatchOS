@@ -602,6 +602,22 @@ class MainActivity : ComponentActivity() {
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
+                // Round Wear OS displays: pad the whole UI by the difference between
+                // the screen radius and its inscribed square so that the top bar,
+                // content and navigation stay inside the visible/touchable circle
+                // instead of spilling into the clipped corners. (1 - 1/sqrt(2)) / 2
+                // of the smallest screen dimension.
+                val isRoundDisplay = remember {
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                        resources.configuration.isScreenRound
+                }
+                val roundSafePadding =
+                    if (isRoundDisplay) {
+                        minOf(maxWidth, maxHeight) * 0.1464466f
+                    } else {
+                        0.dp
+                    }
+
                 val navController = rememberNavController()
 
                 LaunchedEffect(Unit) {
@@ -748,7 +764,7 @@ class MainActivity : ComponentActivity() {
                                 (if (!showRail && shouldShowNavigationBar) navPadding else 0.dp) +
                                 (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
                                 MiniPlayerHeight,
-                        expandedBound = maxHeight,
+                        expandedBound = maxHeight - roundSafePadding * 2,
                     )
 
                 val playerAwareWindowInsets =
@@ -1161,6 +1177,7 @@ class MainActivity : ComponentActivity() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
+                                .padding(roundSafePadding)
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
                         Row(Modifier.fillMaxSize()) {
