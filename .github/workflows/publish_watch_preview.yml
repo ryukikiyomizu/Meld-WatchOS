@@ -84,6 +84,10 @@ jobs:
             grep -aE "^e: |error:|FAILED$|What went wrong" /tmp/gradle_build.log | tail -20 | while IFS= read -r line; do
               echo "::error::${line}"
             done
+            echo "::notice::--- raw tail of gradle log ---"
+            tail -80 /tmp/gradle_build.log | tr -d '\r' | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
           fi
           exit 1
 
