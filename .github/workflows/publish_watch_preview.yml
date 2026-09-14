@@ -2,6 +2,9 @@ name: Publish Watch Preview APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - arena/01a09e33-meld-watchos
 
 permissions:
   contents: write
@@ -54,15 +57,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="watch-preview-$(date -u +%Y%m%d)-${GITHUB_SHA:0:7}"
+          TAG="watchos-preview"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" out/meld-watchos-preview.apk --clobber
+            gh release edit "$TAG" \
+              --notes "Preview APK built from branch \`$GITHUB_REF_NAME\` (unmerged work — PR #1).
+          Commit: ${GITHUB_SHA:0:7}
+
+          Debug-signed build of the FOSS variant for testing on Wear OS watches.
+          Install with: adb install meld-watchos-preview.apk"
           else
             gh release create "$TAG" \
               --target "$GITHUB_SHA" \
               --prerelease \
-              --title "Watch OS preview build ${GITHUB_SHA:0:7} (${GITHUB_REF_NAME})" \
+              --latest=false \
+              --title "Watch OS preview build (unmerged PR #1)" \
               --notes "Preview APK built from branch \`$GITHUB_REF_NAME\` (unmerged work — PR #1).
+          Commit: ${GITHUB_SHA:0:7}
 
           Debug-signed build of the FOSS variant for testing on Wear OS watches.
           Install with: adb install meld-watchos-preview.apk" \
