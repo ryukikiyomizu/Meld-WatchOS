@@ -21,9 +21,12 @@ import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.session.MediaBrowser
+import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import com.google.android.gms.wearable.Wearable
+import com.metrolist.innertube.YouTube
+import com.metrolist.innertube.models.SongItem
 import com.metrolist.music.BuildConfig
 import com.metrolist.music.R
 import com.metrolist.music.bridge.WearBridge
@@ -57,9 +60,11 @@ import timber.log.Timber
  * Answers Wear OS companion requests on behalf of [MusicService].
  *
  * Deliberately thin: it does not re-implement browsing, search or playback resolution. It connects
- * a [MediaBrowser] to Meld's *own* [androidx.media3.session.MediaLibraryService] and rides the
- * exact code path Android Auto uses (`MediaLibrarySessionCallback`). Whatever a car dashboard can
- * show and play, the watch can too — and the two cannot diverge.
+ * Meld's *own* [androidx.media3.session.MediaLibraryService] and rides the exact code paths Android
+ * Auto uses (`MediaLibrarySessionCallback`): a [MediaBrowser] for the library tree and a
+ * [MediaController] for playback. Whatever a car dashboard can show and play, the watch can too — and
+ * the two cannot diverge. Browsing and driving stay separate on purpose: a browser is granted the
+ * library commands, while only a controller is guaranteed the player ones.
  *
  * The watch drives all traffic: it asks while it is in the foreground and goes quiet when the
  * screen turns off, so this class is normally idle and the connection is released.
@@ -74,7 +79,12 @@ class WearPhoneBridge
         @ApplicationScope private val scope: CoroutineScope,
     ) {
         private val connectMutex = Mutex()
+
+        /** Library tree only: `getChildren` needs a browser, and a browser is not a controller. */
         private var browser: MediaBrowser? = null
+
+        /** Everything that changes playback — media3 drops a command the client was not granted. */
+        private var controller: MediaController? = null
         private var idleReleaseJob: Job? = null
 
         /**
@@ -138,7 +148,7 @@ class WearPhoneBridge
         ): JSONObject =
             when (action) {
                 WearBridge.ACTION_PING -> ping()
-                WearBridge.ACTION_STATE -> snapshot(requireBrowser())
+                WearBridge.ACTION_STATE -> snapshot(requireController())
                 WearBridge.ACTION_TRANSPORT -> transport(args)
                 WearBridge.ACTION_TOGGLE -> toggle(args)
                 WearBridge.ACTION_QUEUE -> queue()
@@ -165,7 +175,7 @@ class WearPhoneBridge
         }
 
         private suspend fun transport(args: JSONObject): JSONObject {
-            val player = requireBrowser()
+            val player = requireController()
             when (args.optString(WearBridge.KEY_OP)) {
                 WearBridge.OP_PLAY_PAUSE -> if (player.isPlaying) player.pause() else player.play()
                 WearBridge.OP_NEXT -> player.seekToNextMediaItem()
@@ -192,7 +202,7 @@ class WearPhoneBridge
         }
 
         private suspend fun toggle(args: JSONObject): JSONObject {
-            val player = requireBrowser()
+            val player = requireController()
             when (val op = args.optString(WearBridge.KEY_OP)) {
                 WearBridge.OP_SHUFFLE -> player.shuffleModeEnabled = !player.shuffleModeEnabled
                 WearBridge.OP_REPEAT ->
@@ -214,7 +224,7 @@ class WearPhoneBridge
         }
 
         private suspend fun queue(): JSONObject {
-            val player = requireBrowser()
+            val player = requireController()
             val timeline = player.currentTimeline
             val rows =
                 (0 until timeline.windowCount).mapIndexedNotNull { index, _ ->
@@ -228,7 +238,7 @@ class WearPhoneBridge
         }
 
         private suspend fun queueOp(args: JSONObject): JSONObject {
-            val player = requireBrowser()
+            val player = requireController()
             val index = args.optInt(WearBridge.KEY_INDEX, -1)
             val inRange = index >= 0 && index < player.currentTimeline.windowCount
             when (args.optString(WearBridge.KEY_OP)) {
@@ -254,6 +264,14 @@ class WearPhoneBridge
                 .put(WearBridge.KEY_ITEMS, WearBridge.itemsJson(children.map { it.toWearRow() }))
         }
 
+        /**
+         * One screen of results, read from the phone's own database plus a YouTube song search.
+         *
+         * Not the session's `search()`: that protocol pages through a result set whose size the service
+         * announces first (Meld announces one, for Auto), while the watch only ever shows a single list.
+         * Songs keep the `search/<query>/<id>` id so the service expands a tap into the same queue the
+         * phone would have built; albums, artists and playlists point at the browse tree.
+         */
         private suspend fun search(args: JSONObject): JSONObject {
             val query = args.optString(WearBridge.KEY_QUERY).trim()
             if (query.isEmpty()) {
@@ -261,30 +279,141 @@ class WearPhoneBridge
                     .put(WearBridge.KEY_QUERY, "")
                     .put(WearBridge.KEY_ITEMS, WearBridge.itemsJson(emptyList()))
             }
-            val client = requireBrowser()
-            client.search(query, null).await()
-            val results =
-                client
-                    .getSearchResult(query, 0, MAX_LIST_ITEMS, null)
-                    .await()
-                    .value
-                    .orEmpty()
-                    .audioOnly()
+            val rows = mutableListOf<WearMediaRow>()
+            val seen = mutableSetOf<String>()
+
+            fun addRow(row: WearMediaRow) {
+                if (seen.add(row.mediaId) && rows.size < MAX_LIST_ITEMS) rows += row
+            }
+
+            await(database.searchSongs(query, SEARCH_SONG_LIMIT))
+                .orEmpty()
+                .filterNot { it.song.isVideo }
+                .forEach { song ->
+                    addRow(
+                        WearMediaRow(
+                            mediaId = "${MusicService.SEARCH}/$query/${song.id}",
+                            title = song.title,
+                            subtitle = song.orderedArtists.joinToString { artist -> artist.name },
+                            artworkUri = song.thumbnailUrl?.takeIf { it.startsWith("http") },
+                            kind = WearBridge.KIND_SONG,
+                            playable = true,
+                            durationMs = song.song.duration.coerceAtLeast(0) * 1000L,
+                            downloaded =
+                                downloadUtil
+                                    .downloads.value[song.id]
+                                    ?.state == Download.STATE_COMPLETED,
+                        ),
+                    )
+                }
+
+            await(database.searchAlbums(query, SEARCH_CONTAINER_LIMIT))
+                .orEmpty()
+                .forEach { album ->
+                    addRow(
+                        WearMediaRow(
+                            mediaId = "${MusicService.ALBUM}/${album.id}",
+                            title = album.title,
+                            subtitle = album.artists.joinToString { artist -> artist.name },
+                            artworkUri = album.album.thumbnailUrl?.takeIf { it.startsWith("http") },
+                            kind = WearBridge.KIND_ALBUM,
+                            browsable = true,
+                        ),
+                    )
+                }
+
+            await(database.searchPlaylists(query, SEARCH_CONTAINER_LIMIT))
+                .orEmpty()
+                .forEach { playlist ->
+                    addRow(
+                        WearMediaRow(
+                            mediaId = "${MusicService.PLAYLIST}/${playlist.id}",
+                            title = playlist.title,
+                            subtitle = songCount(playlist.songCount),
+                            artworkUri = playlist.playlist.thumbnailUrl?.takeIf { it.startsWith("http") },
+                            kind = WearBridge.KIND_PLAYLIST,
+                            browsable = true,
+                        ),
+                    )
+                }
+
+            await(database.searchArtists(query, SEARCH_CONTAINER_LIMIT))
+                .orEmpty()
+                .forEach { artist ->
+                    addRow(
+                        WearMediaRow(
+                            mediaId = "${MusicService.ARTIST}/${artist.id}",
+                            title = artist.title,
+                            subtitle = songCount(artist.songCount),
+                            artworkUri = artist.thumbnailUrl?.takeIf { it.startsWith("http") },
+                            kind = WearBridge.KIND_ARTIST,
+                            browsable = true,
+                        ),
+                    )
+                }
+
+            // Online songs come last: a slow network then only costs the rows nobody had reached yet,
+            // and the wait is bounded because the library is worth showing on its own.
+            val online =
+                withTimeoutOrNull(ONLINE_SEARCH_TIMEOUT_MS) {
+                    YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                }?.items.orEmpty().filterIsInstance<SongItem>()
+            online.forEach { item ->
+                if (item.isVideoSong) return@forEach // audio only, same rule as the tree
+                addRow(
+                    WearMediaRow(
+                        mediaId = "${MusicService.SEARCH}/$query/${item.id}",
+                        title = item.title,
+                        subtitle = item.artists.joinToString { artist -> artist.name },
+                        artworkUri = item.thumbnail.takeIf { it.startsWith("http") },
+                        kind = WearBridge.KIND_SONG,
+                        playable = true,
+                        downloaded =
+                            downloadUtil
+                                .downloads.value[item.id]
+                                ?.state == Download.STATE_COMPLETED,
+                    ),
+                )
+            }
+
             return JSONObject()
                 .put(WearBridge.KEY_QUERY, query)
-                .put(WearBridge.KEY_ITEMS, WearBridge.itemsJson(results.map { it.toWearRow() }))
+                .put(WearBridge.KEY_ITEMS, WearBridge.itemsJson(rows))
         }
+
+        /** "%1$d songs", in the phone's language: the row is built here, not on the watch. */
+        private fun songCount(count: Int): String =
+            appContext.resources.getQuantityString(R.plurals.wear_bridge_n_songs, count, count)
 
         private suspend fun play(args: JSONObject): JSONObject {
             val mediaId = args.optString(WearBridge.KEY_MEDIA_ID)
             require(mediaId.isNotEmpty()) { "Missing mediaId" }
-            val player = requireBrowser()
+            val player = requireController()
             // Only the id travels. `onSetMediaItems` on the service side expands it into the real
             // queue (playlist/album/search context), exactly like Android Auto does.
             player.setMediaItems(listOf(MediaItem.Builder().setMediaId(mediaId).build()), 0, C.TIME_UNSET)
             player.play()
-            delay(COMMAND_SETTLE_MS)
+            awaitQueue(player, mediaId)
             return snapshot(player)
+        }
+
+        /**
+         * The service owns the queue, and a `search/...` id costs it a library scan plus a YouTube
+         * lookup before anything starts, so wait for the items to land. A command the client was not
+         * granted is dropped silently by media3 rather than throwing, and a watch that says "done"
+         * while nothing happened is worse than one that admits the phone never started.
+         */
+        private suspend fun awaitQueue(
+            player: Player,
+            mediaId: String,
+        ) {
+            val deadline = SystemClock.elapsedRealtime() + PLAY_ACCEPT_TIMEOUT_MS
+            while (SystemClock.elapsedRealtime() < deadline) {
+                if (player.mediaItemCount > 0) return
+                delay(80L)
+            }
+            Timber.tag(TAG).w("Meld did not accept playback of '%s'", mediaId)
+            throw IllegalStateException(appContext.getString(R.string.wear_bridge_play_not_accepted))
         }
 
         private suspend fun playContainer(args: JSONObject): JSONObject {
@@ -340,7 +469,7 @@ class WearPhoneBridge
         }
 
         private suspend fun volume(args: JSONObject): JSONObject {
-            val player = requireBrowser()
+            val player = requireController()
             if (args.has(WearBridge.KEY_VALUE)) {
                 player.volume = args.optDouble(WearBridge.KEY_VALUE, 1.0).toFloat().coerceIn(0f, 1f)
             }
@@ -423,11 +552,34 @@ class WearPhoneBridge
             }
         }
 
+        /**
+         * The playback connection. Separate from [requireBrowser] on purpose: a browser's player
+         * commands are whatever the session decided to grant, and every write here (queue, play or
+         * pause, seek, volume) needs commands a `MediaController` is granted by default.
+         */
+        private suspend fun requireController(): MediaController {
+            keepWarm()
+            connectMutex.withLock {
+                controller?.takeIf { it.isConnected }?.let { return it }
+                val connected =
+                    withContext(Dispatchers.Main) {
+                        runCatching {
+                            val token = SessionToken(appContext, ComponentName(appContext, MusicService::class.java))
+                            MediaController.Builder(appContext, token).buildAsync().await()
+                        }.onFailure {
+                            Timber.tag(TAG).w(it, "Could not connect to Meld's media session for playback")
+                        }.getOrNull()
+                    } ?: throw IllegalStateException(appContext.getString(R.string.wear_bridge_unreachable))
+                controller = connected
+                return connected
+            }
+        }
+
         private suspend fun sendCommand(
             command: SessionCommand,
             args: Bundle,
         ) {
-            val client = requireBrowser()
+            val client = requireController()
             runCatching { client.sendCustomCommand(command, args).await() }
                 .onFailure { Timber.tag(TAG).w(it, "Custom command '${command.customAction}' failed") }
         }
@@ -442,9 +594,13 @@ class WearPhoneBridge
                 scope.launch {
                     delay(BROWSER_IDLE_TIMEOUT_MS)
                     connectMutex.withLock {
-                        val current = browser ?: return@withLock
-                        if (!current.isPlaying) {
-                            runCatching { current.release() }
+                        controller?.takeIf { !it.isPlaying }?.let { playing ->
+                            runCatching { playing.release() }
+                            controller = null
+                        }
+                        controller?.let { return@withLock } // still playing: keep browsing warm too
+                        browser?.let { browsing ->
+                            runCatching { browsing.release() }
                             browser = null
                         }
                     }
@@ -506,12 +662,20 @@ class WearPhoneBridge
             ).toJson().put(WearBridge.KEY_VALUE, player.volume.toDouble())
         }
 
+        /**
+         * The tree's own playable/browsable flags are the source of truth, but a row with neither would
+         * be a dead tap on the watch, so the media id's shape — which the service defines — fills in
+         * whatever the metadata left out.
+         */
         private fun MediaItem.toWearRow(index: Int = -1): WearMediaRow {
             val meta = mediaMetadata
             val id = mediaId.orEmpty()
-            val isPlayable = meta.isPlayable == true
-            val isBrowsable = meta.isBrowsable == true
-            val songId = id.substringAfterLast('/').takeIf { it.length == SONG_ID_LENGTH }
+            val path = id.split('/')
+            val songId = path.last().takeIf { it.length == SONG_ID_LENGTH }
+            // A song row is the one whose last path segment is a song id. `search/<query>` looks the
+            // same when the query happens to be 11 characters long, so it is excluded by name.
+            val isSong = songId != null && (path.size != 2 || path.first() != MusicService.SEARCH)
+            val isContainer = !isSong && path.size < 3
             return WearMediaRow(
                 mediaId = id,
                 title = meta.title?.toString().orEmpty().ifEmpty { id },
@@ -521,15 +685,15 @@ class WearPhoneBridge
                     ).joinToString(" · "),
                 artworkUri = meta.artworkUri?.toString()?.takeIf { it.startsWith("http") },
                 kind =
-                    when (meta.mediaType) {
-                        MediaMetadata.MEDIA_TYPE_MUSIC -> WearBridge.KIND_SONG
-                        MediaMetadata.MEDIA_TYPE_ALBUM -> WearBridge.KIND_ALBUM
-                        MediaMetadata.MEDIA_TYPE_ARTIST -> WearBridge.KIND_ARTIST
-                        MediaMetadata.MEDIA_TYPE_PLAYLIST -> WearBridge.KIND_PLAYLIST
-                        else -> if (isPlayable && !isBrowsable) WearBridge.KIND_SONG else WearBridge.KIND_FOLDER
+                    when {
+                        isSong -> WearBridge.KIND_SONG
+                        meta.mediaType == MediaMetadata.MEDIA_TYPE_ALBUM -> WearBridge.KIND_ALBUM
+                        meta.mediaType == MediaMetadata.MEDIA_TYPE_ARTIST -> WearBridge.KIND_ARTIST
+                        meta.mediaType == MediaMetadata.MEDIA_TYPE_PLAYLIST -> WearBridge.KIND_PLAYLIST
+                        else -> WearBridge.KIND_FOLDER
                     },
-                playable = isPlayable,
-                browsable = isBrowsable,
+                playable = meta.isPlayable == true || isSong,
+                browsable = meta.isBrowsable == true || isContainer,
                 downloaded = songId?.let { downloadUtil.downloads.value[it]?.state == Download.STATE_COMPLETED } == true,
                 index = index,
             )
@@ -561,7 +725,11 @@ class WearPhoneBridge
             const val DB_TIMEOUT_MS = 1_200L
             const val BROWSER_IDLE_TIMEOUT_MS = 90_000L
             const val COMMAND_SETTLE_MS = 120L
+            const val PLAY_ACCEPT_TIMEOUT_MS = 12_000L
+            const val ONLINE_SEARCH_TIMEOUT_MS = 6_000L
             const val MAX_LIST_ITEMS = 80
+            const val SEARCH_SONG_LIMIT = 40
+            const val SEARCH_CONTAINER_LIMIT = 6
             const val SKIP_STEP_MS = 10_000L
             const val REWIND_THRESHOLD_MS = 3_000L
             const val SONG_ID_LENGTH = 11

@@ -332,6 +332,44 @@ fun StateMessage(
     }
 }
 
+/**
+ * One-line explanation of something that just failed, tappable to dismiss. Remote actions used to fail
+ * silently, which read as a broken watch rather than as a phone that said no.
+ */
+@Composable
+fun NoticeRow(
+    text: String,
+    modifier: Modifier = Modifier,
+    onDismiss: () -> Unit = {},
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f))
+                .clickable(onClick = onDismiss)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Warning,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.size(14.dp),
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
 @Composable
 fun LoadingBlock(modifier: Modifier = Modifier) {
     Box(

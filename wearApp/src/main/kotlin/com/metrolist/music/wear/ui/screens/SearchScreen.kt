@@ -48,6 +48,7 @@ import com.metrolist.music.wear.ui.WearRoute
 import com.metrolist.music.wear.ui.WearRouter
 import com.metrolist.music.wear.ui.components.LoadingBlock
 import com.metrolist.music.wear.ui.components.MediaRow
+import com.metrolist.music.wear.ui.components.NoticeRow
 import com.metrolist.music.wear.ui.components.ScreenHeader
 import com.metrolist.music.wear.ui.components.SquareButton
 import com.metrolist.music.wear.ui.components.StateMessage
@@ -80,6 +81,7 @@ fun SearchScreen(router: WearRouter) {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var recents by remember { mutableStateOf<List<String>>(emptyList()) }
+    var notice by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { recents = WearPrefs.recentSearches(context) }
 
@@ -127,6 +129,9 @@ fun SearchScreen(router: WearRouter) {
                     error = null
                 },
             )
+            notice?.let { message ->
+                NoticeRow(text = message, onDismiss = { notice = null })
+            }
             val found = results
             when {
                 loading -> LoadingBlock()
@@ -149,8 +154,11 @@ fun SearchScreen(router: WearRouter) {
                                     scope.launch {
                                         when {
                                             row.playable -> {
+                                                notice = null
                                                 if (MeldWear.play(row.mediaId)) {
                                                     router.popTo(WearRoute.Player)
+                                                } else {
+                                                    notice = MeldWear.lastError.value
                                                 }
                                             }
                                             row.browsable ->

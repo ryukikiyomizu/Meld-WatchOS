@@ -1106,4 +1106,9 @@
     <string name="wear_bridge_remove_playing">Can\'t remove the song that is playing</string>
     <string name="wear_bridge_sleep_range">Sleep timer must be between %1$d and %2$d minutes</string>
     <string name="wear_bridge_download_needs_library">Not in your library yet \u2014 play it once on the phone first</string>
+    <string name="wear_bridge_play_not_accepted">Meld didn\'t start playback on the phone</string>
+    <plurals name="wear_bridge_n_songs">
+        <item quantity="one">%d song</item>
+        <item quantity="other">%d songs</item>
+    </plurals>
 </resources>

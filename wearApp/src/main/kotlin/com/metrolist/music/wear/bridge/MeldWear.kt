@@ -61,6 +61,12 @@ object MeldWear {
     private const val DEFAULT_TIMEOUT_MS = 6_000L
     private const val SEARCH_TIMEOUT_MS = 25_000L
 
+    /**
+     * Starting playback can cost the phone a library scan plus a YouTube lookup before the queue
+     * exists, so this is deliberately longer than a plain round trip.
+     */
+    private const val PLAY_TIMEOUT_MS = 20_000L
+
     private var appContext: Context? = null
     private var cachedNodeId: String? = null
 
@@ -115,6 +121,7 @@ object MeldWear {
         key: String,
         value: String,
         extra: JSONObject?,
+        timeoutMs: Long = DEFAULT_TIMEOUT_MS,
     ): Boolean {
         val args = JSONObject().put(key, value)
         extra?.let { payload ->
@@ -127,7 +134,7 @@ object MeldWear {
         // Optimistically mark the player busy: the round trip plus the phone's own state read is
         // ~200ms, and without this the play/pause button looks dead for a fifth of a second.
         _working.value = true
-        val data = call(action, args, DEFAULT_TIMEOUT_MS)
+        val data = call(action, args, timeoutMs)
         _working.value = false
         if (data == null) return false
         _state.value = WearPlayerState.fromJson(data)
@@ -150,7 +157,8 @@ object MeldWear {
         return WearBridge.itemsFrom(data)
     }
 
-    suspend fun play(mediaId: String): Boolean = mutate(WearBridge.ACTION_PLAY, WearBridge.KEY_MEDIA_ID, mediaId, null)
+    suspend fun play(mediaId: String): Boolean =
+        mutate(WearBridge.ACTION_PLAY, WearBridge.KEY_MEDIA_ID, mediaId, null, PLAY_TIMEOUT_MS)
 
     suspend fun playContainer(
         parentId: String,
@@ -161,7 +169,7 @@ object MeldWear {
                 .put(WearBridge.KEY_PARENT_ID, parentId)
                 .put(WearBridge.KEY_SHUFFLE, shuffle)
         _working.value = true
-        val ok = call(WearBridge.ACTION_PLAY_CONTAINER, args, DEFAULT_TIMEOUT_MS) != null
+        val ok = call(WearBridge.ACTION_PLAY_CONTAINER, args, PLAY_TIMEOUT_MS) != null
         _working.value = false
         return ok
     }

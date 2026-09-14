@@ -37,6 +37,7 @@ import com.metrolist.music.wear.ui.WearRoute
 import com.metrolist.music.wear.ui.WearRouter
 import com.metrolist.music.wear.ui.components.LoadingBlock
 import com.metrolist.music.wear.ui.components.MediaRow
+import com.metrolist.music.wear.ui.components.NoticeRow
 import com.metrolist.music.wear.ui.components.ScreenHeader
 import com.metrolist.music.wear.ui.components.StateMessage
 import com.metrolist.music.wear.ui.components.WearList
@@ -59,6 +60,7 @@ fun LibraryScreen(router: WearRouter) {
     var rows by remember { mutableStateOf<List<WearMediaRow>?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(resumed) {
         if (!resumed) return@LaunchedEffect
@@ -93,6 +95,9 @@ fun LibraryScreen(router: WearRouter) {
                 }
             },
         )
+        notice?.let { message ->
+            NoticeRow(text = message, onDismiss = { notice = null })
+        }
         val items = rows
         when {
             items == null && loading -> LoadingBlock()
@@ -154,7 +159,15 @@ fun LibraryScreen(router: WearRouter) {
                                                 label = row.title,
                                             ),
                                         )
-                                    row.playable -> scope.launch { MeldWear.play(row.mediaId) }
+                                    row.playable ->
+                                        scope.launch {
+                                            notice = null
+                                            if (MeldWear.play(row.mediaId)) {
+                                                router.popTo(WearRoute.Player)
+                                            } else {
+                                                notice = MeldWear.lastError.value
+                                            }
+                                        }
                                 }
                             },
                         )

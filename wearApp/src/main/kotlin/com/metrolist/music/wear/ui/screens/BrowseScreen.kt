@@ -45,6 +45,7 @@ import com.metrolist.music.wear.ui.WearRoute
 import com.metrolist.music.wear.ui.WearRouter
 import com.metrolist.music.wear.ui.components.LoadingBlock
 import com.metrolist.music.wear.ui.components.MediaRow
+import com.metrolist.music.wear.ui.components.NoticeRow
 import com.metrolist.music.wear.ui.components.ScreenHeader
 import com.metrolist.music.wear.ui.components.SquareButton
 import com.metrolist.music.wear.ui.components.StateMessage
@@ -72,6 +73,7 @@ fun BrowseScreen(
     var loading by remember(parentId) { mutableStateOf(true) }
     var error by remember(parentId) { mutableStateOf<String?>(null) }
     var pendingRemove by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun load() {
         val loaded = MeldWear.browse(parentId)
@@ -79,7 +81,8 @@ fun BrowseScreen(
             rows = loaded
             error = null
         } else {
-            error = MeldWear.lastError.value ?: "Phone did not answer"
+            // The phone's own reason when it has one; the empty state below already has advice.
+            error = MeldWear.lastError.value
         }
         loading = false
     }
@@ -94,6 +97,9 @@ fun BrowseScreen(
             title = label,
             onBack = { router.pop() },
         )
+        notice?.let { message ->
+            NoticeRow(text = message, onDismiss = { notice = null })
+        }
         val items = rows
         val playable = items?.count { it.playable && !it.mediaId.endsWith(SHUFFLE_SUFFIX) } ?: 0
         when {
@@ -128,12 +134,28 @@ fun BrowseScreen(
                                 SquareButton(
                                     label = stringResource(R.string.play),
                                     modifier = Modifier.width(74.dp),
-                                    onClick = { scope.launch { MeldWear.playContainer(parentId, shuffle = false) } },
+                                    onClick = {
+                                        scope.launch {
+                                            if (MeldWear.playContainer(parentId, shuffle = false)) {
+                                                router.popTo(WearRoute.Player)
+                                            } else {
+                                                notice = MeldWear.lastError.value
+                                            }
+                                        }
+                                    },
                                 )
                                 SquareButton(
                                     label = stringResource(R.string.shuffle),
                                     modifier = Modifier.width(74.dp),
-                                    onClick = { scope.launch { MeldWear.playContainer(parentId, shuffle = true) } },
+                                    onClick = {
+                                        scope.launch {
+                                            if (MeldWear.playContainer(parentId, shuffle = true)) {
+                                                router.popTo(WearRoute.Player)
+                                            } else {
+                                                notice = MeldWear.lastError.value
+                                            }
+                                        }
+                                    },
                                 )
                             }
                         }
@@ -158,7 +180,12 @@ fun BrowseScreen(
                                         )
                                     row.playable ->
                                         scope.launch {
-                                            if (MeldWear.play(row.mediaId)) router.popTo(WearRoute.Player)
+                                            notice = null
+                                            if (MeldWear.play(row.mediaId)) {
+                                                router.popTo(WearRoute.Player)
+                                            } else {
+                                                notice = MeldWear.lastError.value
+                                            }
                                         }
                                 }
                             },
