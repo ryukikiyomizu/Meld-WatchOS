@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -33,14 +34,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import com.metrolist.music.wear.R
 import kotlin.math.PI
 import kotlin.math.atan2
 
@@ -151,11 +151,10 @@ fun TransportRow(
             onClick = onPrevious,
             enabled = enabled,
             diameter = 42.dp,
-            contentDescription = "Previous",
         ) {
             Icon(
                 imageVector = Icons.Filled.SkipPrevious,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.previous),
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -165,16 +164,19 @@ fun TransportRow(
             diameter = 54.dp,
         ) {
             when {
+                // No spinner here: the indicator is tinted from the theme and would vanish on the
+                // filled button, and a dimmed glyph costs the watch no animation frames.
                 busy ->
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
+                        tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.55f),
+                        modifier = Modifier.size(26.dp),
                     )
                 else ->
                     Icon(
                         imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        contentDescription = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play),
                         modifier = Modifier.size(26.dp),
                     )
             }
@@ -183,11 +185,10 @@ fun TransportRow(
             onClick = onNext,
             enabled = enabled,
             diameter = 42.dp,
-            contentDescription = "Next",
         ) {
             Icon(
                 imageVector = Icons.Filled.SkipNext,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.next),
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -208,10 +209,10 @@ fun NudgeRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        GhostIconButton(onClick = onBackward, enabled = enabled, contentDescription = "Back $stepSeconds seconds") {
+        GhostIconButton(onClick = onBackward, enabled = enabled) {
             Icon(
                 imageVector = Icons.Filled.Replay10,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.seek_back_seconds, stepSeconds),
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -220,10 +221,10 @@ fun NudgeRow(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        GhostIconButton(onClick = onForward, enabled = enabled, contentDescription = "Forward $stepSeconds seconds") {
+        GhostIconButton(onClick = onForward, enabled = enabled) {
             Icon(
                 imageVector = Icons.Filled.Forward10,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.seek_forward_seconds, stepSeconds),
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -240,7 +241,6 @@ fun GhostIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     diameter: Dp = 38.dp,
-    contentDescription: String? = null,
     content: @Composable () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
@@ -249,7 +249,6 @@ fun GhostIconButton(
             modifier
                 .size(diameter)
                 .clip(CircleShape)
-                .semantics { this.contentDescription = contentDescription }
                 .background(
                     if (enabled) {
                         MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)

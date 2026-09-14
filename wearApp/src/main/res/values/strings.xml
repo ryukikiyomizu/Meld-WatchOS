@@ -11,6 +11,11 @@
     <string name="search">Search</string>
     <string name="more">More</string>
     <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="seek_back_seconds">Back %1$d seconds</string>
+    <string name="seek_forward_seconds">Forward %1$d seconds</string>
     <string name="shuffle">Shuffle</string>
     <string name="start_radio">Play songs like this</string>
     <string name="start_radio_hint">Radio adds songs similar to this queue</string>

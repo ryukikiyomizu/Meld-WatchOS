@@ -157,11 +157,14 @@ fun MediaRow(
             contentAlignment = Alignment.Center,
         ) {
             when {
+                // Static glyph instead of a spinner: it has to survive ambient mode and it costs
+                // the watch no redraws while a list is scrolling.
                 playing ->
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 2.dp,
+                    Icon(
+                        imageVector = Icons.Filled.GraphicEq,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp),
                     )
                 showArtwork && row.artworkUri != null ->
                     AsyncImage(

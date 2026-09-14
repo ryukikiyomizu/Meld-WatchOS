@@ -371,7 +371,6 @@ private fun ToggleTile(
     GhostIconButton(
         onClick = onClick,
         enabled = enabled,
-        contentDescription = contentDescription,
         modifier = Modifier.size(38.dp),
     ) {
         Icon(

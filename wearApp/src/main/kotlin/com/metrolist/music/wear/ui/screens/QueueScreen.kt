@@ -46,6 +46,9 @@ import com.metrolist.music.wear.ui.util.rememberResumed
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** The queue changes while the user browses, so it is polled faster than the library. */
+private const val REFRESH_MS = 4_000L
+
 /**
  * The phone's queue: what is playing, what is next, jump or drop a song.
  *

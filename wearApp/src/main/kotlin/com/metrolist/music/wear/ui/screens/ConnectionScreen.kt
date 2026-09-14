@@ -97,8 +97,11 @@ fun ConnectionScreen(router: WearRouter) {
             (link as? WearLink.Linked)?.device?.let { device ->
                 item { Fact(label = stringResource(R.string.link_device), value = device) }
             }
-            if (state.phoneVersion != null) {
-                item { Fact(label = stringResource(R.string.link_meld_version), value = state.phoneVersion) }
+            // Read the delegated property once: `state` is a Compose `State` delegate, so the
+            // compiler cannot smart-cast the nullable field inside the `item` lambda.
+            val phoneVersion = state.phoneVersion
+            if (phoneVersion != null) {
+                item { Fact(label = stringResource(R.string.link_meld_version), value = phoneVersion) }
             }
             if (state.phoneBatteryPercent >= 0) {
                 item {

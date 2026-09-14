@@ -281,7 +281,7 @@ class WearPhoneBridge
             val player = requireBrowser()
             // Only the id travels. `onSetMediaItems` on the service side expands it into the real
             // queue (playlist/album/search context), exactly like Android Auto does.
-            player.setMediaItems(listOf(MediaItem.fromMediaId(mediaId)), 0, C.TIME_UNSET)
+            player.setMediaItems(listOf(MediaItem.Builder().setMediaId(mediaId).build()), 0, C.TIME_UNSET)
             player.play()
             delay(COMMAND_SETTLE_MS)
             return snapshot(player)
@@ -444,7 +444,7 @@ class WearPhoneBridge
                     connectMutex.withLock {
                         val current = browser ?: return@withLock
                         if (!current.isPlaying) {
-                            runCatching { current.releaseAsync().await() }
+                            runCatching { current.release() }
                             browser = null
                         }
                     }
@@ -468,7 +468,7 @@ class WearPhoneBridge
             val item = player.currentMediaItem
             val metadata = item?.mediaMetadata
             val songId = item?.mediaId?.takeIf { it.length == SONG_ID_LENGTH }
-            val liked = songId?.let { database.song(it) }?.let(::await)?.let { it.song.liked } == true
+            val liked = songId?.let { await(database.song(it)) }?.song?.liked == true
             val downloaded = songId?.let { downloadUtil.downloads.value[it]?.state } == Download.STATE_COMPLETED
             val remainingSleep =
                 watchSleepEndsAtMs

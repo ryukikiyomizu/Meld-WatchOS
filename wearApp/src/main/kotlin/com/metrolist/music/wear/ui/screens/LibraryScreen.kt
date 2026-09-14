@@ -51,6 +51,8 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun LibraryScreen(router: WearRouter) {
+    // Resolved here: `stringResource` is @Composable-only and the row callback is a plain lambda.
+    val downloadedLabel = stringResource(R.string.downloaded)
     val scope = rememberCoroutineScope()
     val resumed = rememberResumed()
     val settings = LocalWearSettings.current
@@ -122,7 +124,7 @@ fun LibraryScreen(router: WearRouter) {
                                 router.push(
                                     WearRoute.Browse(
                                         parentId = WearBridge.downloadedContainer(),
-                                        label = stringResource(R.string.downloaded),
+                                        label = downloadedLabel,
                                     ),
                                 )
                             },
