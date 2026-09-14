@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -62,6 +66,7 @@ import com.metrolist.music.ui.menu.CsvColumnMappingDialog
 import com.metrolist.music.ui.menu.CsvImportProgressDialog
 import com.metrolist.music.ui.menu.LoadingScreen
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.SessionTransfer
 import com.metrolist.music.viewmodels.BackupPreviewInfo
 import com.metrolist.music.viewmodels.BackupRestoreViewModel
 import com.metrolist.music.viewmodels.ConvertedSongLog
@@ -106,6 +111,13 @@ fun BackupAndRestore(
     var backupPreviewInfo by remember { mutableStateOf<BackupPreviewInfo?>(null) }
     var isLoadingAccountInfo by remember { mutableStateOf(false) }
     var accountCheckFailed by remember { mutableStateOf(false) }
+
+    // Session transfer state (move a signed-in session to another device,
+    // e.g. phone -> Wear OS watch where the sign-in WebView is unavailable)
+    var showSessionExportDialog by rememberSaveable { mutableStateOf(false) }
+    var sessionExportPayload by remember { mutableStateOf<String?>(null) }
+    var showSessionImportDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingSessionImport by remember { mutableStateOf<SessionTransfer.Parsed?>(null) }
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -160,6 +172,42 @@ fun BackupAndRestore(
             }
         }
 
+    val saveSessionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+            val payload = sessionExportPayload
+            if (uri == null || payload == null) return@rememberLauncherForActivityResult
+            runCatching {
+                context.applicationContext.contentResolver.openOutputStream(uri)?.use {
+                    it.write(payload.toByteArray(Charsets.UTF_8))
+                }
+            }.onSuccess {
+                Toast.makeText(context, R.string.session_code_saved, Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                Toast.makeText(context, R.string.session_save_failed, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    fun handleImportedSessionText(text: String?) {
+        val parsed = SessionTransfer.parsePayload(text)
+        if (parsed == null) {
+            Toast.makeText(context, R.string.session_code_invalid, Toast.LENGTH_SHORT).show()
+        } else {
+            pendingSessionImport = parsed
+        }
+    }
+
+    val importSessionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            val text =
+                runCatching {
+                    context.applicationContext.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.bufferedReader().readText()
+                    }
+                }.getOrNull()
+            handleImportedSessionText(text)
+        }
+
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
@@ -211,6 +259,48 @@ fun BackupAndRestore(
                             importPlaylistFromCsv.launch(
                                 arrayOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain"),
                             )
+                        },
+                    ),
+                ),
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = stringResource(R.string.session_transfer),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Material3SettingsGroup(
+            items =
+                listOf(
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.export_session)) },
+                        description = { Text(stringResource(R.string.export_session_description)) },
+                        icon = painterResource(R.drawable.share),
+                        onClick = {
+                            coroutineScope.launch {
+                                val payload = SessionTransfer.createPayload(context)
+                                if (payload == null) {
+                                    Toast
+                                        .makeText(context, R.string.session_export_none, Toast.LENGTH_SHORT)
+                                        .show()
+                                } else {
+                                    sessionExportPayload = payload
+                                    showSessionExportDialog = true
+                                }
+                            }
+                        },
+                    ),
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.import_session)) },
+                        description = { Text(stringResource(R.string.import_session_description)) },
+                        icon = painterResource(R.drawable.restore),
+                        onClick = {
+                            showSessionImportDialog = true
                         },
                     ),
                 ),
@@ -464,6 +554,171 @@ fun BackupAndRestore(
                         color = MaterialTheme.colorScheme.outlineVariant,
                     )
                 }
+            }
+        }
+    }
+
+    // Session export dialog: choose how to move the code to the other device
+    if (showSessionExportDialog) {
+        val payload = sessionExportPayload
+        DefaultDialog(
+            onDismiss = { showSessionExportDialog = false },
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.share),
+                    contentDescription = null,
+                )
+            },
+            title = { Text(stringResource(R.string.export_session)) },
+            buttons = {
+                TextButton(
+                    onClick = {
+                        if (payload != null) {
+                            val clipboard = context.getSystemService(ClipboardManager::class.java)
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Meld session", payload))
+                            Toast
+                                .makeText(context, R.string.session_code_copied, Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                        showSessionExportDialog = false
+                    },
+                ) {
+                    Text(stringResource(R.string.session_copy))
+                }
+                TextButton(
+                    onClick = {
+                        if (payload != null) {
+                            val sendIntent =
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, payload)
+                                }
+                            context.startActivity(Intent.createChooser(sendIntent, null))
+                        }
+                        showSessionExportDialog = false
+                    },
+                ) {
+                    Text(stringResource(R.string.session_share))
+                }
+                TextButton(
+                    onClick = {
+                        showSessionExportDialog = false
+                        saveSessionLauncher.launch("meld-session.txt")
+                    },
+                ) {
+                    Text(stringResource(R.string.session_save_file))
+                }
+            },
+        ) {
+            Text(
+                text = stringResource(R.string.session_export_help),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+
+    // Session import chooser: file or clipboard
+    if (showSessionImportDialog) {
+        DefaultDialog(
+            onDismiss = { showSessionImportDialog = false },
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.restore),
+                    contentDescription = null,
+                )
+            },
+            title = { Text(stringResource(R.string.import_session)) },
+            buttons = {
+                TextButton(
+                    onClick = {
+                        showSessionImportDialog = false
+                        importSessionLauncher.launch(arrayOf("text/plain", "text/*", "*/*"))
+                    },
+                ) {
+                    Text(stringResource(R.string.session_import_from_file))
+                }
+                TextButton(
+                    onClick = {
+                        showSessionImportDialog = false
+                        val clipboard = context.getSystemService(ClipboardManager::class.java)
+                        val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                        handleImportedSessionText(text)
+                    },
+                ) {
+                    Text(stringResource(R.string.session_import_from_clipboard))
+                }
+            },
+        ) {
+            Text(
+                text = stringResource(R.string.session_import_help),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+
+    // Session import confirmation
+    pendingSessionImport?.let { parsed ->
+        DefaultDialog(
+            onDismiss = { pendingSessionImport = null },
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.person),
+                    contentDescription = null,
+                )
+            },
+            title = { Text(stringResource(R.string.session_import_confirm_title)) },
+            buttons = {
+                TextButton(
+                    onClick = { pendingSessionImport = null },
+                ) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            SessionTransfer.apply(context, parsed)
+                            // apply() restarts the process; this line is never reached
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.session_import))
+                }
+            },
+        ) {
+            Text(
+                text = stringResource(R.string.session_import_confirm_message),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = parsed.info.accountEmail ?: parsed.info.accountName
+                    ?: stringResource(R.string.session_import_unknown_account),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (parsed.info.hasYouTube) {
+                Text(
+                    text = stringResource(R.string.session_import_includes_youtube),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (parsed.info.hasSpotify) {
+                Text(
+                    text = stringResource(R.string.session_import_includes_spotify),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

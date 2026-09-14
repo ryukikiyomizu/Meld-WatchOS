@@ -1036,6 +1036,31 @@
     <string name="checking_previous_account">Checking for previous account…</string>
     <string name="no_account_found">No account found</string>
 
+    <!-- Session transfer (phone -> watch) -->
+    <string name="session_transfer">Session transfer</string>
+    <string name="export_session">Export session</string>
+    <string name="export_session_description">Send your signed-in session to another device</string>
+    <string name="import_session">Import session</string>
+    <string name="import_session_description">Sign in using a session from another device</string>
+    <string name="session_export_none">No account to export. Sign in first.</string>
+    <string name="session_export_help">Move this code to the other device (share it, or save it to a file and transfer it) and use Import session there. Anyone with this code can access your accounts.</string>
+    <string name="session_copy">Copy</string>
+    <string name="session_share">Share</string>
+    <string name="session_save_file">Save to file</string>
+    <string name="session_code_copied">Session code copied</string>
+    <string name="session_code_saved">Session code saved</string>
+    <string name="session_save_failed">Could not save the session file</string>
+    <string name="session_import_help">Open the session file or paste the session code exported from your other device.</string>
+    <string name="session_import_from_file">Open file</string>
+    <string name="session_import_from_clipboard">Paste from clipboard</string>
+    <string name="session_code_invalid">No valid session code found</string>
+    <string name="session_import_confirm_title">Import session?</string>
+    <string name="session_import_confirm_message">This device will use the account below. Any existing sign-in on this device will be replaced, and the app will restart.</string>
+    <string name="session_import">Import</string>
+    <string name="session_import_unknown_account">Unknown account</string>
+    <string name="session_import_includes_youtube">Includes YouTube Music account</string>
+    <string name="session_import_includes_spotify">Includes Spotify session</string>
+
     <!-- Local Files -->
     <string name="filter_local_files">Local files</string>
     <string name="local_files">Local files</string>
