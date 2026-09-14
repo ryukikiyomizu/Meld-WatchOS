@@ -117,6 +117,7 @@ fun BackupAndRestore(
     var showSessionExportDialog by rememberSaveable { mutableStateOf(false) }
     var sessionExportPayload by remember { mutableStateOf<String?>(null) }
     var showSessionImportDialog by rememberSaveable { mutableStateOf(false) }
+    var showSessionAdbHelpDialog by rememberSaveable { mutableStateOf(false) }
     var pendingSessionImport by remember { mutableStateOf<SessionTransfer.Parsed?>(null) }
 
     val context = LocalContext.current
@@ -648,10 +649,65 @@ fun BackupAndRestore(
                 ) {
                     Text(stringResource(R.string.session_import_from_clipboard))
                 }
+                TextButton(
+                    onClick = {
+                        showSessionImportDialog = false
+                        val file = SessionTransfer.findAdbPushedFile(context)
+                        if (file != null) {
+                            handleImportedSessionText(runCatching { file.readText() }.getOrNull())
+                        } else {
+                            showSessionAdbHelpDialog = true
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.session_import_from_adb))
+                }
             },
         ) {
             Text(
                 text = stringResource(R.string.session_import_help),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+
+    // ADB-push import help (for devices without a browser or usable file picker)
+    if (showSessionAdbHelpDialog) {
+        DefaultDialog(
+            onDismiss = { showSessionAdbHelpDialog = false },
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.restore),
+                    contentDescription = null,
+                )
+            },
+            title = { Text(stringResource(R.string.session_import_from_adb)) },
+            buttons = {
+                TextButton(
+                    onClick = { showSessionAdbHelpDialog = false },
+                ) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+                TextButton(
+                    onClick = {
+                        val file = SessionTransfer.findAdbPushedFile(context)
+                        if (file != null) {
+                            showSessionAdbHelpDialog = false
+                            handleImportedSessionText(runCatching { file.readText() }.getOrNull())
+                        } else {
+                            Toast
+                                .makeText(context, R.string.session_adb_not_found, Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.session_adb_retry))
+                }
+            },
+        ) {
+            Text(
+                text = stringResource(R.string.session_adb_help, context.packageName),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )

@@ -1053,6 +1053,10 @@
     <string name="session_import_help">Open the session file or paste the session code exported from your other device.</string>
     <string name="session_import_from_file">Open file</string>
     <string name="session_import_from_clipboard">Paste from clipboard</string>
+    <string name="session_import_from_adb">Pushed via ADB</string>
+    <string name="session_adb_help">From a computer with the watch connected over ADB, push the exported session file to this device:\n\nadb push meld-session.txt /sdcard/Android/data/%1$s/files/session.txt\n\nThen tap Check again.</string>
+    <string name="session_adb_retry">Check again</string>
+    <string name="session_adb_not_found">No session file found yet. Push it with adb and try again.</string>
     <string name="session_code_invalid">No valid session code found</string>
     <string name="session_import_confirm_title">Import session?</string>
     <string name="session_import_confirm_message">This device will use the account below. Any existing sign-in on this device will be replaced, and the app will restart.</string>

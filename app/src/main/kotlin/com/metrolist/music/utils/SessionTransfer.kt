@@ -221,4 +221,21 @@ object SessionTransfer {
 
     private fun JsonObject.str(key: String): String? =
         (this[key] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+
+    /** File names accepted when importing a session pushed via adb. */
+    private val ADB_FILE_NAMES = listOf("session.txt", "meld-session.txt")
+
+    /**
+     * On devices without a usable browser/file picker (e.g. Wear OS), the
+     * session code can be pushed with adb straight into the app's external
+     * files directory, which needs no storage permission:
+     *
+     *   adb push meld-session.txt /sdcard/Android/data/<package>/files/session.txt
+     */
+    fun findAdbPushedFile(context: Context): java.io.File? {
+        val dir = context.getExternalFilesDir(null) ?: return null
+        return ADB_FILE_NAMES
+            .map { java.io.File(dir, it) }
+            .firstOrNull { it.isFile && it.length() > 0 }
+    }
 }
