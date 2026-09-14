@@ -227,7 +227,7 @@ configurations.configureEach {
 }
 
 dependencies {
-    implementation(libs.play.services.wear)
+    implementation(libs.play.services.wearable)
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)
