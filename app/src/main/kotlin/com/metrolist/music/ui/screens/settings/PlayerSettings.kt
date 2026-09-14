@@ -5,6 +5,8 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,6 +50,7 @@ import com.metrolist.music.constants.CrossfadeDurationKey
 import com.metrolist.music.constants.CrossfadeEnabledKey
 import com.metrolist.music.constants.CrossfadeGaplessKey
 import com.metrolist.music.constants.AutoLoadMoreKey
+import com.metrolist.music.constants.DoublePinchActionKey
 import com.metrolist.music.constants.AutoSkipNextOnErrorKey
 import com.metrolist.music.constants.DisableLoadMoreWhenRepeatAllKey
 import com.metrolist.music.constants.EnableGoogleCastKey
@@ -108,6 +111,11 @@ fun PlayerSettings(
         CrossfadeGaplessKey,
         defaultValue = true
     )
+    val (doublePinchAction, onDoublePinchActionChange) = rememberPreference(
+        DoublePinchActionKey,
+        defaultValue = "pause"
+    )
+    var showDoublePinchDialog by remember { mutableStateOf(false) }
     val (persistentQueue, onPersistentQueueChange) = rememberPreference(
         PersistentQueueKey,
         defaultValue = true
@@ -1038,6 +1046,74 @@ fun PlayerSettings(
                 )
             )
         )
+
+        Spacer(modifier = Modifier.height(27.dp))
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.double_pinch),
+            items = buildList {
+                add(
+                    Material3SettingsItem(
+                        icon = painterResource(R.drawable.drag_handle),
+                        title = { Text(stringResource(R.string.double_pinch)) },
+                        description = {
+                            Text(
+                                when (doublePinchAction) {
+                                    "next" -> stringResource(R.string.dp_action_next)
+                                    "previous" -> stringResource(R.string.dp_action_previous)
+                                    "like" -> stringResource(R.string.dp_action_like)
+                                    "off" -> stringResource(R.string.dp_action_off)
+                                    else -> stringResource(R.string.dp_action_pause)
+                                }
+                            )
+                        },
+                        onClick = { showDoublePinchDialog = true }
+                    )
+                )
+            }
+        )
+
+        if (showDoublePinchDialog) {
+            DefaultDialog(
+                onDismiss = { showDoublePinchDialog = false },
+                icon = {
+                    Icon(
+                        painter = painterResource(R.drawable.drag_handle),
+                        contentDescription = null,
+                    )
+                },
+                title = { Text(stringResource(R.string.double_pinch)) },
+                buttons = {
+                    Column(horizontalAlignment = Alignment.Start) {
+                        listOf(
+                            "pause" to stringResource(R.string.dp_action_pause),
+                            "next" to stringResource(R.string.dp_action_next),
+                            "previous" to stringResource(R.string.dp_action_previous),
+                            "like" to stringResource(R.string.dp_action_like),
+                            "off" to stringResource(R.string.dp_action_off),
+                        ).forEach { (value, label) ->
+                            TextButton(
+                                onClick = {
+                                    onDoublePinchActionChange(value)
+                                    showDoublePinchDialog = false
+                                },
+                            ) {
+                                Text(
+                                    text = if (value == doublePinchAction) "• $label" else label,
+                                    fontWeight = if (value == doublePinchAction) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            }
+                        }
+                    }
+                },
+            ) {
+                Text(
+                    text = stringResource(R.string.double_pinch_description),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
     }
 

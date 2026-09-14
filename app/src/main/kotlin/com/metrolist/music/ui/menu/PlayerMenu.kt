@@ -97,6 +97,7 @@ import com.metrolist.music.ui.component.Material3MenuItemData
 import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.VolumeSlider
+import com.metrolist.music.utils.LinkSender
 import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -380,30 +381,10 @@ fun PlayerMenu(
             ),
     ) {
         item {
-            val startingRadioText = stringResource(R.string.starting_radio)
             NewActionGrid(
                 actions =
                     listOfNotNull(
-                        if (!isListenTogetherGuest) {
-                            NewAction(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.radio),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(32.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = stringResource(R.string.start_radio),
-                                onClick = {
-                                    Toast.makeText(context, startingRadioText, Toast.LENGTH_SHORT).show()
-                                    playerConnection.startRadioSeamlessly()
-                                    onDismiss()
-                                },
-                            )
-                        } else {
-                            null
-                        },
+
                         NewAction(
                             icon = {
                                 Icon(
@@ -425,22 +406,25 @@ fun PlayerMenu(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             },
-                            text = stringResource(R.string.copy_link),
+                            text = stringResource(R.string.send_link),
                             onClick = {
-                                val clipboard =
-                                    context.getSystemService(
-                                        android.content.Context.CLIPBOARD_SERVICE,
-                                    ) as android.content.ClipboardManager
-                                val clip =
-                                    android.content.ClipData.newPlainText(
-                                        "Song Link",
-                                        "https://music.youtube.com/watch?v=${mediaMetadata.id}",
-                                    )
-                                clipboard.setPrimaryClip(clip)
-                                android.widget.Toast
-                                    .makeText(context, R.string.link_copied, android.widget.Toast.LENGTH_SHORT)
-                                    .show()
                                 onDismiss()
+                                coroutineScope.launch {
+                                    val sent =
+                                        LinkSender.sendToPhone(
+                                            context.applicationContext,
+                                            "https://music.youtube.com/watch?v=${mediaMetadata.id}",
+                                        )
+                                    val toastText =
+                                        if (sent > 0) {
+                                            context.getString(R.string.link_sent)
+                                        } else {
+                                            context.getString(R.string.link_send_failed)
+                                        }
+                                    android.widget.Toast
+                                        .makeText(context, toastText, android.widget.Toast.LENGTH_SHORT)
+                                        .show()
+                                }
                             },
                         ),
                     ) + if (com.metrolist.spotify.Spotify.isAuthenticated()) {
@@ -787,23 +771,6 @@ fun PlayerMenu(
                         )
 
                         if (isQueueTrigger != true) {
-                            add(
-                                Material3MenuItemData(
-                                    title = { Text(text = stringResource(R.string.equalizer)) },
-                                    description = { Text(text = stringResource(R.string.equalizer_desc)) },
-                                    icon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.equalizer),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    },
-                                    onClick = {
-                                        navController.navigate("equalizer")
-                                        onDismiss()
-                                    },
-                                ),
-                            )
                             add(
                                 Material3MenuItemData(
                                     title = { Text(text = stringResource(R.string.advanced)) },

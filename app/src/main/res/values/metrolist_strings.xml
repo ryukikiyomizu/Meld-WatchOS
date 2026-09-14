@@ -1119,6 +1119,19 @@
     <string name="time_transfer_convert">Convert</string>
     <string name="song_dropdown_more_results">Keep typing to narrow results (%d more)</string>
 
+    <!-- Watch: send link / double pinch / porter -->
+    <string name="send_link">Send link to phone</string>
+    <string name="link_sent">Link sent to phone</string>
+    <string name="link_send_failed">Couldn\'t reach the paired phone</string>
+    <string name="credits_porter">Developer (Porter)</string>
+    <string name="double_pinch">Double pinch</string>
+    <string name="double_pinch_description">Pinch twice quickly on the player to trigger the selected action.</string>
+    <string name="dp_action_pause">Pause / Play</string>
+    <string name="dp_action_next">Next</string>
+    <string name="dp_action_previous">Previous</string>
+    <string name="dp_action_like">Like</string>
+    <string name="dp_action_off">Off</string>
+
     <!-- Accessibility -->
     <string name="back">Back</string>
     <string name="clear_search">Clear search</string>

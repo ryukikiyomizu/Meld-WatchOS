@@ -436,4 +436,10 @@ fun AccountSettings(
             }
         }
     }
+
+    if (showImportSessionDialog) {
+        SessionImportDialogs(
+            onDismiss = { showImportSessionDialog = false },
+        )
+    }
 }

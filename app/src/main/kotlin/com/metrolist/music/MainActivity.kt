@@ -179,7 +179,6 @@ import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.player.BottomSheetPlayer
 import com.metrolist.music.ui.screens.Screens
 import com.metrolist.music.ui.screens.navigationBuilder
-import com.metrolist.music.ui.screens.settings.ChangelogScreen
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.screens.settings.NavigationTab
 import com.metrolist.music.ui.theme.ColorSaver
@@ -440,7 +439,7 @@ class MainActivity : ComponentActivity() {
     ) {
         val checkForUpdates by rememberPreference(CheckForUpdatesKey, defaultValue = true)
 
-        if (BuildConfig.UPDATER_AVAILABLE) {
+        if (false && BuildConfig.UPDATER_AVAILABLE) {
             LaunchedEffect(checkForUpdates) {
                 if (checkForUpdates) {
                     withContext(Dispatchers.IO) {
@@ -539,7 +538,6 @@ class MainActivity : ComponentActivity() {
         val (selectedThemeColorInt) = rememberPreference(SelectedThemeColorKey, defaultValue = DefaultThemeColor.toArgb())
         val selectedThemeColor = Color(selectedThemeColorInt)
 
-        val showChangelog = rememberSaveable { mutableStateOf(false) }
 
         var themeColor by rememberSaveable(stateSaver = ColorSaver) {
             mutableStateOf(selectedThemeColor)
@@ -614,12 +612,6 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
                 LaunchedEffect(Unit) {
-                    val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
-                    val currentVersion = BuildConfig.VERSION_NAME
-                    if (lastSeenVersion != currentVersion) {
-                        showChangelog.value = true
-                    }
-
                     // SimpMusic Removal Migration
                     if (dataStore.data.first()[SimpMusicMigrationDoneKey] != true) {
                         dataStore.edit { settings ->
@@ -936,12 +928,7 @@ class MainActivity : ComponentActivity() {
                     LocalShimmerTheme provides ShimmerTheme,
                     LocalSyncUtils provides syncUtils,
                     LocalListenTogetherManager provides listenTogetherManager,
-                    LocalChangelogState provides showChangelog,
                 ) {
-                    if (showChangelog.value) {
-                        ChangelogScreen(onDismiss = { showChangelog.value = false })
-                    }
-
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
@@ -1035,14 +1022,6 @@ class MainActivity : ComponentActivity() {
                                                     Icon(
                                                         painter = painterResource(R.drawable.stats),
                                                         contentDescription = stringResource(R.string.stats),
-                                                    )
-                                                }
-                                            }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together),
                                                     )
                                                 }
                                             }

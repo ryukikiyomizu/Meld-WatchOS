@@ -36,6 +36,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,6 +84,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -169,6 +171,7 @@ import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberEnumPreference
+import com.metrolist.music.constants.DoublePinchActionKey
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.rememberRoundScreenInsets
 import kotlinx.coroutines.Dispatchers
@@ -182,6 +185,35 @@ import com.metrolist.music.ui.component.Icon as MIcon
 
 
 @OptIn(ExperimentalMaterial3Api::class)
+private fun Modifier.doublePinchGesture(
+    enabled: Boolean,
+    onDoublePinch: () -> Unit,
+): Modifier =
+    if (!enabled) {
+        this
+    } else {
+        this.pointerInput(onDoublePinch) {
+            var lastPinchAt = 0L
+            while (true) {
+                var totalZoom = 1f
+                var moved = false
+                detectTransformGestures { _, _, zoom, _ ->
+                    totalZoom *= zoom
+                    moved = true
+                }
+                if (moved && (totalZoom < 0.75f || totalZoom > 1.35f)) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastPinchAt < 900L) {
+                        lastPinchAt = 0L
+                        onDoublePinch()
+                    } else {
+                        lastPinchAt = now
+                    }
+                }
+            }
+        }
+    }
+
 @Composable
 fun BottomSheetPlayer(
     state: BottomSheetState,
@@ -239,6 +271,19 @@ fun BottomSheetPlayer(
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val isKeepScreenOn by rememberPreference(KeepScreenOn, false)
+
+    // One UI-style double-pinch gesture (Samsung Wear): two quick pinches
+    // on the player trigger the user-configured action.
+    val doublePinchAction by rememberPreference(DoublePinchActionKey, "pause")
+    val onDoublePinch: () -> Unit = {
+        when (doublePinchAction) {
+            "next" -> playerConnection.player.seekToNext()
+            "previous" -> playerConnection.player.seekToPrevious()
+            "like" -> playerConnection.toggleLike()
+            "off" -> {}
+            else -> playerConnection.player.togglePlayPause()
+        }
+    }
     val keepScreenOn = isPlaying && isKeepScreenOn
 
     DisposableEffect(playerBackground, state.isExpanded, useDarkTheme, keepScreenOn, isFullScreen, hideStatusBarOnFullscreen) {
@@ -801,7 +846,7 @@ fun BottomSheetPlayer(
                                                 .build(),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier.fillMaxSize().blur(16.dp),
                                     )
                                     Box(
                                         modifier =
@@ -1646,7 +1691,8 @@ fun BottomSheetPlayer(
                             .windowInsetsPadding(
                                 WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).add(verticalWindowInsets),
                             ).padding(bottom = 24.dp)
-                            .fillMaxSize(),
+                            .fillMaxSize()
+                            .doublePinchGesture(doublePinchAction != "off", onDoublePinch),
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
@@ -1699,7 +1745,8 @@ fun BottomSheetPlayer(
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                             .padding(horizontal = roundInsets.playerHorizontal)
                             .padding(bottom = bottomPadding + roundInsets.playerBottom)
-                            .animateContentSize(),
+                            .animateContentSize()
+                            .doublePinchGesture(doublePinchAction != "off", onDoublePinch),
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,

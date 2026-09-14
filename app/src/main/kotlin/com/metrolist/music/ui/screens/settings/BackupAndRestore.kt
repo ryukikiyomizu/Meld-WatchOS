@@ -117,8 +117,6 @@ fun BackupAndRestore(
     var showSessionExportDialog by rememberSaveable { mutableStateOf(false) }
     var sessionExportPayload by remember { mutableStateOf<String?>(null) }
     var showSessionImportDialog by rememberSaveable { mutableStateOf(false) }
-    var showSessionAdbHelpDialog by rememberSaveable { mutableStateOf(false) }
-    var pendingSessionImport by remember { mutableStateOf<SessionTransfer.Parsed?>(null) }
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -188,26 +186,6 @@ fun BackupAndRestore(
             }
         }
 
-    fun handleImportedSessionText(text: String?) {
-        val parsed = SessionTransfer.parsePayload(text)
-        if (parsed == null) {
-            Toast.makeText(context, R.string.session_code_invalid, Toast.LENGTH_SHORT).show()
-        } else {
-            pendingSessionImport = parsed
-        }
-    }
-
-    val importSessionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri == null) return@rememberLauncherForActivityResult
-            val text =
-                runCatching {
-                    context.applicationContext.contentResolver.openInputStream(uri)?.use { stream ->
-                        stream.bufferedReader().readText()
-                    }
-                }.getOrNull()
-            handleImportedSessionText(text)
-        }
 
     Column(
         Modifier
@@ -619,163 +597,9 @@ fun BackupAndRestore(
         }
     }
 
-    // Session import chooser: file or clipboard
     if (showSessionImportDialog) {
-        DefaultDialog(
+        SessionImportDialogs(
             onDismiss = { showSessionImportDialog = false },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.restore),
-                    contentDescription = null,
-                )
-            },
-            title = { Text(stringResource(R.string.import_session)) },
-            buttons = {
-                TextButton(
-                    onClick = {
-                        showSessionImportDialog = false
-                        importSessionLauncher.launch(arrayOf("text/plain", "text/*", "*/*"))
-                    },
-                ) {
-                    Text(stringResource(R.string.session_import_from_file))
-                }
-                TextButton(
-                    onClick = {
-                        showSessionImportDialog = false
-                        val clipboard = context.getSystemService(ClipboardManager::class.java)
-                        val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
-                        handleImportedSessionText(text)
-                    },
-                ) {
-                    Text(stringResource(R.string.session_import_from_clipboard))
-                }
-                TextButton(
-                    onClick = {
-                        showSessionImportDialog = false
-                        val file = SessionTransfer.findAdbPushedFile(context)
-                        if (file != null) {
-                            handleImportedSessionText(runCatching { file.readText() }.getOrNull())
-                        } else {
-                            showSessionAdbHelpDialog = true
-                        }
-                    },
-                ) {
-                    Text(stringResource(R.string.session_import_from_adb))
-                }
-            },
-        ) {
-            Text(
-                text = stringResource(R.string.session_import_help),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-
-    // ADB-push import help (for devices without a browser or usable file picker)
-    if (showSessionAdbHelpDialog) {
-        DefaultDialog(
-            onDismiss = { showSessionAdbHelpDialog = false },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.restore),
-                    contentDescription = null,
-                )
-            },
-            title = { Text(stringResource(R.string.session_import_from_adb)) },
-            buttons = {
-                TextButton(
-                    onClick = { showSessionAdbHelpDialog = false },
-                ) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-                TextButton(
-                    onClick = {
-                        val file = SessionTransfer.findAdbPushedFile(context)
-                        if (file != null) {
-                            showSessionAdbHelpDialog = false
-                            handleImportedSessionText(runCatching { file.readText() }.getOrNull())
-                        } else {
-                            Toast
-                                .makeText(context, R.string.session_adb_not_found, Toast.LENGTH_SHORT)
-                                .show()
-                        }
-                    },
-                ) {
-                    Text(stringResource(R.string.session_adb_retry))
-                }
-            },
-        ) {
-            Text(
-                text = stringResource(R.string.session_adb_help, context.packageName),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-
-    // Session import confirmation
-    pendingSessionImport?.let { parsed ->
-        DefaultDialog(
-            onDismiss = { pendingSessionImport = null },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.person),
-                    contentDescription = null,
-                )
-            },
-            title = { Text(stringResource(R.string.session_import_confirm_title)) },
-            buttons = {
-                TextButton(
-                    onClick = { pendingSessionImport = null },
-                ) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-                TextButton(
-                    onClick = {
-                        coroutineScope.launch {
-                            SessionTransfer.apply(context, parsed)
-                            // apply() restarts the process; this line is never reached
-                        }
-                    },
-                ) {
-                    Text(stringResource(R.string.session_import))
-                }
-            },
-        ) {
-            Text(
-                text = stringResource(R.string.session_import_confirm_message),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = parsed.info.accountEmail ?: parsed.info.accountName
-                    ?: stringResource(R.string.session_import_unknown_account),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (parsed.info.hasYouTube) {
-                Text(
-                    text = stringResource(R.string.session_import_includes_youtube),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (parsed.info.hasSpotify) {
-                Text(
-                    text = stringResource(R.string.session_import_includes_spotify),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        )
     }
 }
