@@ -89,6 +89,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+      - name: Create a debug keystore for the phone build
+        # `:app` points its fallback debug signing config at ~/.android/debug.keystore instead of
+        # letting AGP generate one, and CI has no such file, so packaging fails on validateSigning.
+        # This is the same key the Android tools create locally (alias and both passwords "android"),
+        # which keeps the APK installable next to any debug build the phone already has.
+        shell: bash
+        run: |
+          keystore="$HOME/.android/debug.keystore"
+          mkdir -p "$(dirname "$keystore")"
+          if [ ! -f "$keystore" ]; then
+            keytool -genkeypair -keystore "$keystore" \
+              -alias androiddebugkey -storepass android -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10950 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Assemble the phone debug APK
         # The watch only works next to a phone app built from this same code (it carries the bridge),
         # so this produces that APK too instead of merely type-checking the module. A failure here is
