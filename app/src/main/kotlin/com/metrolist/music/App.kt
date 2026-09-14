@@ -129,6 +129,15 @@ class App :
         val locale = Locale.getDefault()
         val languageTag = locale.language
 
+        // Wear OS watches are audio-only devices, so video content (video songs
+        // and YouTube Shorts) is always hidden regardless of the stored setting.
+        if (settings[HideVideoSongsKey] != true || settings[HideYoutubeShortsKey] != true) {
+            dataStore.edit { prefs ->
+                prefs[HideVideoSongsKey] = true
+                prefs[HideYoutubeShortsKey] = true
+            }
+        }
+
         YouTube.locale =
             YouTubeLocale(
                 gl =
