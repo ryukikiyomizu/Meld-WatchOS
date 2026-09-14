@@ -89,6 +89,16 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+      - name: Cache the debug signing key
+        # A freshly generated key on every run means every APK has to be uninstalled before the next
+        # one installs, and uninstalling Meld takes the library and its downloads with it. The Android
+        # debug key is not a release secret, so it can live in the Actions cache between runs.
+        if: always()
+        uses: actions/cache@v5
+        with:
+          path: ~/.android/debug.keystore
+          key: meld-debug-keystore-v1
+
       - name: Create a debug keystore for the phone build
         if: always()
         # `:app` points its fallback debug signing config at ~/.android/debug.keystore instead of
