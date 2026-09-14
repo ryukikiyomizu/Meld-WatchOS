@@ -1,8 +1,8 @@
 name: Build Wear App
 
 # `:wearApp` is a separate module with no flavors, so the root `assemble<Variant>Release`
-# invocations in build.yml never reach it. This job builds the watch APK on its own and uploads it
-# as an artifact; install it with `adb install -r` next to the matching phone build.
+# invocations in build.yml never reach it. This job builds the watch APK, uploads it as an artifact,
+# and double-checks that the phone half of the bridge still compiles.
 
 on:
   workflow_dispatch:
@@ -39,6 +39,14 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     runs-on: ubuntu-latest
 
+    env:
+      # Both overrides must match the phone build: the Data Layer API only pairs apps whose
+      # applicationId is identical.
+      METROLIST_APPLICATION_ID: ${{ github.event.inputs.applicationId || 'com.meld.app' }}
+      METROLIST_APP_NAME: ${{ github.event.inputs.appName || 'Meld Nightly' }}
+      PULL_REQUEST: "false"
+      GITHUB_EVENT_NAME: ${{ github.event_name }}
+
     steps:
       - uses: actions/checkout@v6
 
@@ -64,50 +72,75 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build wear debug APK
-        # The phone half is compiled here too: it only has to agree with the watch on the wire, so
-        # one job that reports both error sets beats reading two workflows' logs.
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew --console=plain :wearApp:assembleDebug :app:compileFossDebugKotlin \
-            --warning-mode summary -x lint 2>&1 | tee "$RUNNER_TEMP/build.log"
-        env:
-          # Both overrides must match the phone build: the Data Layer API only pairs apps whose
-          # applicationId is identical.
-          METROLIST_APPLICATION_ID: ${{ github.event.inputs.applicationId || 'com.meld.app' }}
-          METROLIST_APP_NAME: ${{ github.event.inputs.appName || 'Meld Nightly' }}
-          PULL_REQUEST: "false"
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          ./gradlew --console=plain :wearApp:assembleDebug --warning-mode summary \
+            2>&1 | tee "$RUNNER_TEMP/build.log"
 
-      - name: Surface compile errors
-        # The raw job log lives on blob storage which a headless run cannot fetch, so the compiler
-        # output is mirrored into the step summary and into check-run annotations. Both are served
-        # by github.com and show up on the run page.
-        if: failure()
-        shell: bash
-        run: |
-          log="$RUNNER_TEMP/build.log"
-          if [ ! -f "$log" ]; then
-            echo '::error::Gradle wrote no log; the build step died before starting.'
-            exit 0
-          fi
-          echo '### Build log tail' >> "$GITHUB_STEP_SUMMARY"
-          echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          grep -E "^e: |^> Task .*FAILED|FAILURE:|What went wrong|Caused by:|^w: .*unresolved" "$log" \
-            | head -n 200 >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          while IFS= read -r line; do
-            printf '::error::%s\n' "${line#e: }"
-          done < <(grep -E "^e: " "$log" | head -n 40)
-          while IFS= read -r line; do
-            printf '::error::%s\n' "$line"
-          done < <(grep -E -A3 "What went wrong" "$log" | grep -v '^--$' | head -n 16)
-
+      # Uploaded before anything else can fail, so the APK is on the run page whenever it exists.
       - name: Upload wear APK
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: meld-wear-debug
           path: wearApp/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
+
+      - name: Compile the phone half of the bridge
+        # A failure here is reported (the job goes red), but the artifact is already uploaded, so a
+        # broken phone half never hides a watch APK that built fine.
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain :app:compileFossDebugKotlin --warning-mode summary \
+            2>&1 | tee -a "$RUNNER_TEMP/build.log"
+
+      - name: Surface compile errors
+        # The raw job log lives on blob storage that CI tooling cannot reach, so the compiler output
+        # is mirrored into check-run annotations and onto the commit as a comment: both are plain
+        # github.com API surfaces. This step never fails, whatever it finds.
+        if: failure()
+        shell: bash
+        run: |
+          log="${RUNNER_TEMP:-.}/build.log"
+          out="${GITHUB_STEP_SUMMARY:-/dev/null}"
+          {
+            echo '### Build log, errors only'
+            echo '```text'
+            grep -E "^e: |^> Task .*FAILED|^FAILURE:|What went wrong|Caused by:" "$log" 2>/dev/null \
+              | awk 'NR<=250'
+            echo '```'
+          } >>"$out" 2>/dev/null
+          grep -E "^e: " "$log" 2>/dev/null | awk 'NR<=40' | while IFS= read -r line; do
+            printf '::error::%s\n' "${line#e: }"
+          done
+          exit 0
+
+      - name: Publish errors as commit comment
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          log="${RUNNER_TEMP:-.}/build.log"
+          body=$(
+            {
+              echo "### ${GITHUB_WORKFLOW:-Build Wear App} errors for commit ${GITHUB_SHA:0:7}"
+              echo
+              echo '```text'
+              grep -E "^e: |^> Task .*FAILED|^FAILURE:|What went wrong|Caused by:" "$log" 2>/dev/null \
+                | awk 'NR<=300'
+              echo '```'
+            } | head -c 60000
+          )
+          if [ -z "$body" ]; then
+            body='Build failed with no parsable Gradle output (log missing or empty).'
+          fi
+          gh api --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
+            -f body="$body" || echo "could not post the commit comment"
+          exit 0
