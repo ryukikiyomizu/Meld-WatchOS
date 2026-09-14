@@ -725,10 +725,11 @@ class MainActivity : ComponentActivity() {
                     }
 
                 val shouldShowNavigationBar =
-                    remember(currentRoute, navigationItemRoutes) {
-                        currentRoute == null ||
-                            navigationItemRoutes.contains(currentRoute) ||
-                            currentRoute!!.startsWith("search/")
+                    remember(currentRoute, navigationItemRoutes, roundInsets.isRound) {
+                        !roundInsets.isRound &&
+                            (currentRoute == null ||
+                                navigationItemRoutes.contains(currentRoute) ||
+                                currentRoute!!.startsWith("search/"))
                     }
 
                 val isLandscape = configuration.containerDpSize.width > configuration.containerDpSize.height
@@ -755,7 +756,8 @@ class MainActivity : ComponentActivity() {
                             bottomInset +
                                 (if (!showRail && shouldShowNavigationBar) navPadding else 0.dp) +
                                 (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
-                                MiniPlayerHeight,
+                                MiniPlayerHeight +
+                                roundInsets.bottomBarBottom,
                         expandedBound = maxHeight,
                     )
 
@@ -947,6 +949,63 @@ class MainActivity : ComponentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
+                                if (roundInsets.isRound) {
+                                    // Native watch header: no text title, the nav
+                                    // icons sit centered below the top curve.
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = roundInsets.topBarTop),
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        navigationItems.forEach { screen ->
+                                            val selected = currentRoute == screen.route
+                                            IconButton(
+                                                onClick = {
+                                                    if (playerBottomSheetState.isExpanded) {
+                                                        playerBottomSheetState.collapseSoft()
+                                                    }
+                                                    navController.navigate(screen.route) {
+                                                        popUpTo(navController.graph.startDestinationId) {
+                                                            saveState = true
+                                                        }
+                                                        launchSingleTop = true
+                                                        restoreState = true
+                                                    }
+                                                },
+                                            ) {
+                                                Icon(
+                                                    painter =
+                                                        painterResource(
+                                                            if (selected) screen.iconIdActive else screen.iconIdInactive,
+                                                        ),
+                                                    contentDescription = null,
+                                                )
+                                            }
+                                        }
+                                        IconButton(onClick = { showAccountDialog = true }) {
+                                            if (accountImageUrl != null) {
+                                                AsyncImage(
+                                                    model = accountImageUrl,
+                                                    contentDescription = stringResource(R.string.account),
+                                                    modifier =
+                                                        Modifier
+                                                            .size(24.dp)
+                                                            .clip(CircleShape),
+                                                )
+                                            } else {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.account),
+                                                    contentDescription = stringResource(R.string.account),
+                                                    modifier = Modifier.size(24.dp),
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
                                 Row(
                                     Modifier.padding(
                                         top = roundInsets.topBarTop,
@@ -1030,6 +1089,7 @@ class MainActivity : ComponentActivity() {
                                                 },
                                             ),
                                     )
+                                }
                                 }
                             }
                         },
@@ -1185,7 +1245,11 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
-                        Row(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = roundInsets.horizontal),
+                        ) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
                                 remember(navController, coroutineScope, topAppBarScrollBehavior, playerBottomSheetState) {
                                     { screen: Screens, isSelected: Boolean ->

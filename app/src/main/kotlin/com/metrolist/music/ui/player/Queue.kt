@@ -266,7 +266,12 @@ fun Queue(
             if (useNewPlayerDesign) {
                 // New design
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement =
+                        if (roundInsets.isRound) {
+                            Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                        } else {
+                            Arrangement.spacedBy(6.dp)
+                        },
                     verticalAlignment = Alignment.CenterVertically,
                     modifier =
                         Modifier
@@ -369,7 +374,9 @@ fun Queue(
                         playerBackground = playerBackground,
                     )
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    if (!roundInsets.isRound) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
 
                     Box(
                         modifier =

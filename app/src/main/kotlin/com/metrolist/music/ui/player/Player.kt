@@ -122,6 +122,12 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
 import com.metrolist.music.LocalDownloadUtil
+import androidx.media3.exoplayer.offline.Download
+import androidx.media3.exoplayer.offline.DownloadRequest
+import androidx.media3.exoplayer.offline.DownloadService
+import androidx.core.net.toUri
+import com.metrolist.music.LocalDatabase
+import com.metrolist.music.playback.ExoDownloadService
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
@@ -544,6 +550,7 @@ fun BottomSheetPlayer(
     val download by LocalDownloadUtil.current
         .getDownload(mediaMetadata?.id ?: "")
         .collectAsState(initial = null)
+    val database = LocalDatabase.current
 
     val sleepTimerEnabled =
         remember(
@@ -1032,16 +1039,36 @@ fun BottomSheetPlayer(
                     ) {
                         FilledIconButton(
                             onClick = {
-                                val intent =
-                                    Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        type = "text/plain"
-                                        putExtra(
-                                            Intent.EXTRA_TEXT,
-                                            "https://music.youtube.com/watch?v=${mediaMetadata.id}",
+                                val videoId = mediaMetadata.id
+                                when (download?.state) {
+                                    Download.STATE_COMPLETED,
+                                    Download.STATE_QUEUED,
+                                    Download.STATE_DOWNLOADING,
+                                    ->
+                                        DownloadService.sendRemoveDownload(
+                                            context,
+                                            ExoDownloadService::class.java,
+                                            videoId,
+                                            false,
+                                        )
+                                    else -> {
+                                        database.transaction {
+                                            insert(mediaMetadata)
+                                        }
+                                        val downloadRequest =
+                                            DownloadRequest
+                                                .Builder(videoId, videoId.toUri())
+                                                .setCustomCacheKey(videoId)
+                                                .setData(mediaMetadata.title.toByteArray())
+                                                .build()
+                                        DownloadService.sendAddDownload(
+                                            context,
+                                            ExoDownloadService::class.java,
+                                            downloadRequest,
+                                            false,
                                         )
                                     }
-                                context.startActivity(Intent.createChooser(intent, null))
+                                }
                             },
                             shape = shareShape,
                             colors =
@@ -1052,7 +1079,14 @@ fun BottomSheetPlayer(
                             modifier = Modifier.size(42.dp),
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.share),
+                                painter =
+                                    painterResource(
+                                        if (download?.state == Download.STATE_COMPLETED) {
+                                            R.drawable.offline
+                                        } else {
+                                            R.drawable.download
+                                        },
+                                    ),
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
                             )

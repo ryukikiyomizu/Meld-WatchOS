@@ -69,6 +69,7 @@ import com.metrolist.music.ui.component.InfoLabel
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.PreferenceEntry
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.utils.Updater
 import com.metrolist.music.utils.rememberPreference
@@ -107,10 +108,12 @@ fun AccountSettings(
     var showLogoutDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val roundInsets = rememberRoundScreenInsets()
+
     Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp)
+            .padding(16.dp + roundInsets.horizontal)
             .verticalScroll(rememberScrollState())
     ) {
         Row(
