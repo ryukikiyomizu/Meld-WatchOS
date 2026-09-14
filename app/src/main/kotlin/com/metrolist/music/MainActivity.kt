@@ -640,7 +640,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     dataStore.edit { settings ->
-                        settings[LastSeenVersionKey] = currentVersion
+                        settings[LastSeenVersionKey] = BuildConfig.VERSION_NAME
                     }
                 }
 

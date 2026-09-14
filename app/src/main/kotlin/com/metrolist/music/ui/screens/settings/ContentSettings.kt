@@ -326,6 +326,67 @@ fun ContentSettings(
         )
     }
 
+    var showQuickPicksDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    if (showQuickPicksDialog) {
+        EnumDialog(
+            onDismiss = { showQuickPicksDialog = false },
+            onSelect = {
+                onQuickPicksChange(it)
+                showQuickPicksDialog = false
+            },
+            title = stringResource(R.string.set_quick_picks),
+            current = quickPicks,
+            values = QuickPicks.values().toList(),
+            valueText = {
+                when (it) {
+                    QuickPicks.QUICK_PICKS -> stringResource(R.string.quick_picks)
+                    QuickPicks.LAST_LISTEN -> stringResource(R.string.last_song_listened)
+                }
+            }
+        )
+    }
+
+    var showTopLengthDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    if (showTopLengthDialog) {
+        var tempLength by rememberSaveable { mutableFloatStateOf(lengthTop.toFloat()) }
+
+        AlertDialog(
+            onDismissRequest = { showTopLengthDialog = false },
+            title = { Text(stringResource(R.string.top_length)) },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(tempLength.toInt().toString())
+                    Slider(
+                        value = tempLength,
+                        onValueChange = { tempLength = it },
+                        valueRange = 1f..100f,
+                        steps = 98
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onLengthTopChange(tempLength.toInt().toString())
+                        showTopLengthDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            }
+        )
+    }
+
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
