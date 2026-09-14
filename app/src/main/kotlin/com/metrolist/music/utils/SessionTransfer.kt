@@ -8,8 +8,7 @@ package com.metrolist.music.utils
 import android.content.Context
 import android.content.Intent
 import android.util.Base64
-import androidx.datastore.preferences.core.LongPreferencesKey
-import androidx.datastore.preferences.core.StringPreferencesKey
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.metrolist.music.constants.AccountChannelHandleKey
 import com.metrolist.music.constants.AccountEmailKey
@@ -78,8 +77,8 @@ object SessionTransfer {
     /** A parsed payload: metadata for display plus the values to write. */
     data class Parsed(
         val info: Info,
-        val strings: Map<StringPreferencesKey, String>,
-        val longs: Map<LongPreferencesKey, Long>,
+        val strings: Map<Preferences.Key<String>, String>,
+        val longs: Map<Preferences.Key<Long>, Long>,
     )
 
     /**
@@ -153,8 +152,8 @@ object SessionTransfer {
                 return null
             }
 
-        val strings = HashMap<StringPreferencesKey, String>()
-        val longs = HashMap<LongPreferencesKey, Long>()
+        val strings = HashMap<Preferences.Key<String>, String>()
+        val longs = HashMap<Preferences.Key<Long>, Long>()
 
         root["youtube"]?.jsonObject?.let { section ->
             youtubeKeys.forEach { (jsonKey, key) ->
