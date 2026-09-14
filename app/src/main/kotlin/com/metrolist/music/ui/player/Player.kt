@@ -164,7 +164,7 @@ import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
-import com.metrolist.music.utils.rememberRoundSafePadding
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -203,9 +203,9 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-    // Round Wear OS displays: keep the controls inside the circle's inscribed
-    // square while the album-art background stays full-bleed.
-    val roundSafePadding = rememberRoundSafePadding()
+    // Round Wear OS displays: native-ratio insets (marquee etc.) while the
+    // album-art background and controls stay full-bleed.
+    val roundInsets = rememberRoundScreenInsets()
 
     // Wear OS build: the player always shows the album art as its background
     // (the BLUR style drives the image-background color scheme; the rendering
@@ -896,7 +896,7 @@ fun BottomSheetPlayer(
                             color = TextBackgroundColor,
                             modifier =
                                 Modifier
-                                    .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                    .basicMarquee(iterations = if (roundInsets.isRound) Int.MAX_VALUE else 1, initialDelayMillis = 3000, velocity = 30.dp)
                                     .combinedClickable(
                                         enabled = true,
                                         indication = null,
@@ -942,7 +942,7 @@ fun BottomSheetPlayer(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .basicMarquee(iterations = 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                        .basicMarquee(iterations = if (roundInsets.isRound) Int.MAX_VALUE else 1, initialDelayMillis = 3000, velocity = 30.dp)
                                         .padding(end = 12.dp),
                             ) {
                                 var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -1612,7 +1612,6 @@ fun BottomSheetPlayer(
                             .windowInsetsPadding(
                                 WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).add(verticalWindowInsets),
                             ).padding(bottom = 24.dp)
-                            .padding(horizontal = roundSafePadding)
                             .fillMaxSize(),
                 ) {
                     Box(
@@ -1640,7 +1639,6 @@ fun BottomSheetPlayer(
                         modifier =
                             Modifier
                                 .weight(1f, false)
-                                .padding(horizontal = roundSafePadding)
                                 .animateContentSize()
                                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
                     ) {
@@ -1665,7 +1663,6 @@ fun BottomSheetPlayer(
                     modifier =
                         Modifier
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                            .padding(horizontal = roundSafePadding)
                             .padding(bottom = bottomPadding)
                             .animateContentSize(),
                 ) {

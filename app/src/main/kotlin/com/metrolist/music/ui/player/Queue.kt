@@ -133,7 +133,6 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.roundToInt
 import com.metrolist.music.constants.SleepTimerDefaultKey
-import com.metrolist.music.utils.rememberRoundSafePadding
 import androidx.datastore.preferences.core.edit
 import android.widget.Toast
 import androidx.compose.runtime.derivedStateOf
@@ -253,10 +252,6 @@ fun Queue(
             }
         }
     }
-
-    // Round Wear OS displays: inset the queue list/header into the circle's
-    // inscribed square so rows are not clipped by the bezel.
-    val roundSafePadding = rememberRoundSafePadding()
 
     BottomSheet(
         state = state,
@@ -719,10 +714,7 @@ fun Queue(
                                 bottom = ListItemHeight + 8.dp,
                             ),
                         ).asPaddingValues(),
-                modifier =
-                    Modifier
-                        .padding(horizontal = roundSafePadding)
-                        .nestedScroll(state.preUpPostDownNestedScrollConnection),
+                modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
             ) {
                 item(key = "queue_top_spacer") {
                     Spacer(
@@ -1010,11 +1002,6 @@ fun Queue(
                     ).windowInsetsPadding(
                         WindowInsets.systemBars
                             .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-                    )
-                    .padding(
-                        top = roundSafePadding,
-                        start = roundSafePadding,
-                        end = roundSafePadding,
                     ),
         ) {
             Row(

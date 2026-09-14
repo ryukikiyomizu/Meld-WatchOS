@@ -194,7 +194,7 @@ import androidx.datastore.preferences.core.edit
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
-import com.metrolist.music.utils.rememberRoundSafePadding
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import com.metrolist.music.utils.reportException
 import com.metrolist.spotify.Spotify
 
@@ -608,7 +608,7 @@ class MainActivity : ComponentActivity() {
                 // sheets, menus) is inset into the circle's inscribed square so
                 // nothing spills into the clipped corners. (1 - 1/sqrt(2)) / 2
                 // of the smallest screen dimension.
-                val roundSafePadding = rememberRoundSafePadding()
+                val roundInsets = rememberRoundScreenInsets()
 
                 val navController = rememberNavController()
 
@@ -756,7 +756,7 @@ class MainActivity : ComponentActivity() {
                                 (if (!showRail && shouldShowNavigationBar) navPadding else 0.dp) +
                                 (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
                                 MiniPlayerHeight,
-                        expandedBound = maxHeight - roundSafePadding * 2,
+                        expandedBound = maxHeight,
                     )
 
                 val playerAwareWindowInsets =
@@ -949,9 +949,9 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Row(
                                     Modifier.padding(
-                                        top = roundSafePadding,
-                                        start = roundSafePadding,
-                                        end = roundSafePadding,
+                                        top = roundInsets.topBarTop,
+                                        start = roundInsets.horizontal,
+                                        end = roundInsets.horizontal,
                                     ),
                                 ) {
                                     TopAppBar(
@@ -962,7 +962,7 @@ class MainActivity : ComponentActivity() {
                                             )
                                         },
                                         actions = {
-                                            if (showHistoryButton) {
+                                            if (showHistoryButton && !roundInsets.isRound) {
                                                 IconButton(onClick = { navController.navigate("history") }) {
                                                     Icon(
                                                         painter = painterResource(R.drawable.history),
@@ -970,11 +970,13 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                 }
                                             }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats),
-                                                )
+                                            if (!roundInsets.isRound) {
+                                                IconButton(onClick = { navController.navigate("stats") }) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.stats),
+                                                        contentDescription = stringResource(R.string.stats),
+                                                    )
+                                                }
                                             }
                                             if (listenTogetherInTopBar) {
                                                 IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
@@ -1012,8 +1014,8 @@ class MainActivity : ComponentActivity() {
                                         scrollBehavior = topAppBarScrollBehavior,
                                         colors =
                                             TopAppBarDefaults.topAppBarColors(
-                                                containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                scrolledContainerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                                                containerColor = if (roundInsets.isRound) Color.Transparent else if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                                                scrolledContainerColor = if (roundInsets.isRound) Color.Transparent else if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
                                                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                                                 actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1104,14 +1106,11 @@ class MainActivity : ComponentActivity() {
                                         pureBlack = pureBlack,
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
+                                        transparentContainer = roundInsets.isRound,
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
-                                                .padding(
-                                                    start = roundSafePadding,
-                                                    end = roundSafePadding,
-                                                    bottom = roundSafePadding,
-                                                )
+                                                .padding(bottom = roundInsets.bottomBarBottom)
                                                 .height(bottomInset + navPadding)
                                                 // Use graphicsLayer instead of offset to avoid recomposition
                                                 // graphicsLayer runs during draw phase, not composition phase
@@ -1166,7 +1165,6 @@ class MainActivity : ComponentActivity() {
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = roundSafePadding)
                                             .align(Alignment.BottomCenter)
                                             .height(bottomInsetDp)
                                             // Use graphicsLayer for background color changes
@@ -1183,11 +1181,7 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
-                        Row(
-                            Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = roundSafePadding),
-                        ) {
+                        Row(Modifier.fillMaxSize()) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
                                 remember(navController, coroutineScope, topAppBarScrollBehavior, playerBottomSheetState) {
                                     { screen: Screens, isSelected: Boolean ->
@@ -1324,26 +1318,12 @@ class MainActivity : ComponentActivity() {
 
                     BottomSheetMenu(
                         state = LocalMenuState.current,
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(
-                                    start = roundSafePadding,
-                                    end = roundSafePadding,
-                                    bottom = roundSafePadding,
-                                ),
+                        modifier = Modifier.align(Alignment.BottomCenter),
                     )
 
                     BottomSheetPage(
                         state = LocalBottomSheetPageState.current,
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(
-                                    start = roundSafePadding,
-                                    end = roundSafePadding,
-                                    bottom = roundSafePadding,
-                                ),
+                        modifier = Modifier.align(Alignment.BottomCenter),
                     )
 
                     if (showAccountDialog) {

@@ -72,23 +72,46 @@ private fun Context.storedDensityScale(): Float =
     }
 
 /**
- * Padding that insets full-width bars (top bars, lists, sheets, menus) into
- * the largest square inscribed in a round Wear OS display, so they are not
- * clipped by the circular bezel. The inscribed square of a circle starts
- * (1 - 1/sqrt(2)) / 2 ~= 0.1464466 of the smallest screen dimension in from
- * every edge. Returns 0.dp on rectangular displays.
+ * Proportional insets for round Wear OS displays, following the native
+ * Wear OS layout ratios (Material 3 Expressive for wear / Horologist
+ * responsive padding):
+ *
+ *  - [horizontal]      5.2% of the width, the canonical Wear list horizontal
+ *                      padding; used for fixed bars so their content starts
+ *                      clear of the bezel curve.
+ *  - [topBarTop]       pushes a fixed top bar below the narrow top arc so
+ *                      title + actions sit on a wide-enough chord.
+ *  - [bottomBarBottom] lifts fixed bottom controls off the narrow bottom arc.
+ *
+ * Everything else (backgrounds, scrolling lists, sheets) stays full-bleed
+ * and flows through the circle, getting clipped by the bezel exactly like
+ * native watch apps. All values are 0 on rectangular displays.
  */
+data class RoundScreenInsets(
+    val isRound: Boolean,
+    val horizontal: Dp,
+    val topBarTop: Dp,
+    val bottomBarBottom: Dp,
+)
+
 @Composable
-fun rememberRoundSafePadding(): Dp {
+fun rememberRoundScreenInsets(): RoundScreenInsets {
     val configuration = LocalConfiguration.current
     return remember(configuration) {
         val isRound =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
                 configuration.isScreenRound
         if (isRound) {
-            minOf(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp) * 0.1464466f
+            val w = configuration.screenWidthDp.dp
+            val h = configuration.screenHeightDp.dp
+            RoundScreenInsets(
+                isRound = true,
+                horizontal = w * 0.052f,
+                topBarTop = h * 0.09f,
+                bottomBarBottom = h * 0.07f,
+            )
         } else {
-            0.dp
+            RoundScreenInsets(false, 0.dp, 0.dp, 0.dp)
         }
     }
 }

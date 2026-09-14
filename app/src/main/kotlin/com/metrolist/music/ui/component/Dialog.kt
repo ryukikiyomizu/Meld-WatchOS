@@ -60,7 +60,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.metrolist.music.R
 import com.metrolist.music.ui.screens.settings.AccountSettings
-import com.metrolist.music.utils.rememberRoundSafePadding
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import kotlinx.coroutines.delay
 
 @Composable
@@ -73,15 +73,12 @@ fun DefaultDialog(
     horizontalAlignment: Alignment.Horizontal = Alignment.CenterHorizontally,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    // Round Wear OS displays: keep the dialog card inside the inscribed square
-    // so its corners are not clipped by the circular bezel.
-    val roundSafePadding = rememberRoundSafePadding()
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Surface(
-            modifier = Modifier.padding(24.dp + roundSafePadding),
+            modifier = Modifier.padding(24.dp),
             shape = AlertDialogDefaults.shape,
             color = AlertDialogDefaults.containerColor,
             tonalElevation = AlertDialogDefaults.TonalElevation,
@@ -146,7 +143,9 @@ fun AccountSettingsDialog(
     onDismiss: () -> Unit,
     latestVersionName: String,
 ) {
-    val roundSafePadding = rememberRoundSafePadding()
+    // Round Wear OS displays: the account sheet becomes a full-bleed screen
+    // that flows through the circle, like native watch surfaces.
+    val roundInsets = rememberRoundScreenInsets()
     Dialog(
         onDismissRequest = onDismiss,
         properties =
@@ -169,14 +168,16 @@ fun AccountSettingsDialog(
         ) {
             Surface(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            top = 72.dp + roundSafePadding,
-                            start = 16.dp + roundSafePadding,
-                            end = 16.dp + roundSafePadding,
-                        )
-                        .clip(RoundedCornerShape(28.dp)),
+                    if (roundInsets.isRound) {
+                        Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(28.dp))
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 72.dp, start = 16.dp, end = 16.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                    },
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp,
@@ -255,13 +256,12 @@ fun ListDialog(
     modifier: Modifier = Modifier,
     content: LazyListScope.() -> Unit,
 ) {
-    val roundSafePadding = rememberRoundSafePadding()
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Surface(
-            modifier = Modifier.padding(24.dp + roundSafePadding),
+            modifier = Modifier.padding(24.dp),
             shape = AlertDialogDefaults.shape,
             color = AlertDialogDefaults.containerColor,
             tonalElevation = AlertDialogDefaults.TonalElevation,
