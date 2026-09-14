@@ -1,8 +1,9 @@
 name: Build Wear App
 
 # `:wearApp` is a separate module with no flavors, so the root `assemble<Variant>Release`
-# invocations in build.yml never reach it. This job builds the watch APK, uploads it as an artifact,
-# and double-checks that the phone half of the bridge still compiles.
+# invocations in build.yml never reach it. This job builds the watch APK and the matching foss debug
+# phone APK (the bridge lives on the phone side, so the two have to come from one build) and uploads
+# both as artifacts.
 
 on:
   workflow_dispatch:
@@ -88,15 +89,25 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Compile the phone half of the bridge
-        # A failure here is reported (the job goes red), but the artifact is already uploaded, so a
-        # broken phone half never hides a watch APK that built fine.
+      - name: Assemble the phone debug APK
+        # The watch only works next to a phone app built from this same code (it carries the bridge),
+        # so this produces that APK too instead of merely type-checking the module. A failure here is
+        # reported, but the watch artifact is already uploaded, so it never hides a good watch build.
         if: always()
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew --console=plain :app:compileFossDebugKotlin --warning-mode summary \
+          ./gradlew --console=plain :app:assembleFossDebug --warning-mode summary \
             2>&1 | tee -a "$RUNNER_TEMP/build.log"
+
+      - name: Upload phone APK
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: meld-phone-foss-debug
+          path: app/build/outputs/apk/foss/debug/*.apk
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Surface compile errors
         # The raw job log lives on blob storage that CI tooling cannot reach, so the compiler output
