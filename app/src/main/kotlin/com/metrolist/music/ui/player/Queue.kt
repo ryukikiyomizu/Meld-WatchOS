@@ -125,6 +125,7 @@ import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -253,6 +254,8 @@ fun Queue(
         }
     }
 
+    val roundInsets = rememberRoundScreenInsets()
+
     BottomSheet(
         state = state,
         modifier = modifier,
@@ -269,6 +272,7 @@ fun Queue(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 30.dp, vertical = 12.dp)
+                            .padding(bottom = roundInsets.playerBottom)
                             .windowInsetsPadding(
                                 WindowInsets.systemBars.only(
                                     WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal,

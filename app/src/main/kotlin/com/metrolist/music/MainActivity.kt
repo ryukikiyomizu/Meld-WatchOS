@@ -950,8 +950,8 @@ class MainActivity : ComponentActivity() {
                                 Row(
                                     Modifier.padding(
                                         top = roundInsets.topBarTop,
-                                        start = roundInsets.horizontal,
-                                        end = roundInsets.horizontal,
+                                        start = roundInsets.topBarHorizontal,
+                                        end = roundInsets.topBarHorizontal,
                                     ),
                                 ) {
                                     TopAppBar(
@@ -1106,12 +1106,16 @@ class MainActivity : ComponentActivity() {
                                         pureBlack = pureBlack,
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
-                                        transparentContainer = roundInsets.isRound,
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
-                                                .padding(bottom = roundInsets.bottomBarBottom)
+                                                .padding(
+                                                    bottom = roundInsets.bottomBarBottom,
+                                                    start = roundInsets.bottomBarHorizontal,
+                                                    end = roundInsets.bottomBarHorizontal,
+                                                )
                                                 .height(bottomInset + navPadding)
+                                                .clip(RoundedCornerShape(32.dp))
                                                 // Use graphicsLayer instead of offset to avoid recomposition
                                                 // graphicsLayer runs during draw phase, not composition phase
                                                 .graphicsLayer {

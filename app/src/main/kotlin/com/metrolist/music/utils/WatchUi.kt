@@ -72,26 +72,31 @@ private fun Context.storedDensityScale(): Float =
     }
 
 /**
- * Proportional insets for round Wear OS displays, following the native
- * Wear OS layout ratios (Material 3 Expressive for wear / Horologist
- * responsive padding):
+ * Proportional, circle-aware insets for round Wear OS displays, following the
+ * native Wear OS layout language (Material 3 Expressive for wear, wear-os
+ * samples, Horologist responsive padding): backgrounds and scrolling content
+ * stay full-bleed and flow through the circle (the bezel clipping them is the
+ * native look), while FIXED bars are placed on vertical bands and inset
+ * horizontally by exactly the circle segment at their band, so nothing is
+ * ever clipped by the bezel.
  *
- *  - [horizontal]      5.2% of the width, the canonical Wear list horizontal
- *                      padding; used for fixed bars so their content starts
- *                      clear of the bezel curve.
- *  - [topBarTop]       pushes a fixed top bar below the narrow top arc so
- *                      title + actions sit on a wide-enough chord.
- *  - [bottomBarBottom] lifts fixed bottom controls off the narrow bottom arc.
+ *  - [topBarTop] / [topBarHorizontal]      band for the fixed top bar.
+ *  - [bottomBarBottom] / [bottomBarHorizontal]  band for the floating nav pill.
+ *  - [playerHorizontal] / [playerBottom]   keeps the player's wide title row
+ *    and its bottom controls clear of the curves.
+ *  - [horizontal] 5.2% of the width, the canonical Wear list horizontal padding.
  *
- * Everything else (backgrounds, scrolling lists, sheets) stays full-bleed
- * and flows through the circle, getting clipped by the bezel exactly like
- * native watch apps. All values are 0 on rectangular displays.
+ * All values are 0 on rectangular displays.
  */
 data class RoundScreenInsets(
     val isRound: Boolean,
     val horizontal: Dp,
     val topBarTop: Dp,
+    val topBarHorizontal: Dp,
     val bottomBarBottom: Dp,
+    val bottomBarHorizontal: Dp,
+    val playerHorizontal: Dp,
+    val playerBottom: Dp,
 )
 
 @Composable
@@ -104,14 +109,35 @@ fun rememberRoundScreenInsets(): RoundScreenInsets {
         if (isRound) {
             val w = configuration.screenWidthDp.dp
             val h = configuration.screenHeightDp.dp
+            val r = minOf(w, h) / 2f
+
+            // Horizontal inset needed so a view spanning [y0, y1] (measured
+            // from the top edge) stays inside the circle: the difference
+            // between the radius and the half-chord at the band's farthest
+            // edge from the center.
+            fun bandInset(y0: Dp, y1: Dp): Dp {
+                val dy = maxOf(kotlin.math.abs((r - y0).value), kotlin.math.abs((r - y1).value))
+                val halfChord = kotlin.math.sqrt(maxOf(0f, r.value * r.value - dy * dy))
+                return (r.value - halfChord).dp
+            }
+
+            val topBarTop = h * 0.16f
+            val topBarHorizontal = bandInset(topBarTop, topBarTop + 64.dp) + 4.dp
+            val bottomBarBottom = h * 0.12f
+            val bottomBarHorizontal = bandInset(h - bottomBarBottom - 72.dp, h - bottomBarBottom) + 4.dp
+
             RoundScreenInsets(
                 isRound = true,
                 horizontal = w * 0.052f,
-                topBarTop = h * 0.09f,
-                bottomBarBottom = h * 0.07f,
+                topBarTop = topBarTop,
+                topBarHorizontal = topBarHorizontal,
+                bottomBarBottom = bottomBarBottom,
+                bottomBarHorizontal = bottomBarHorizontal,
+                playerHorizontal = w * 0.10f,
+                playerBottom = h * 0.10f,
             )
         } else {
-            RoundScreenInsets(false, 0.dp, 0.dp, 0.dp)
+            RoundScreenInsets(false, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp)
         }
     }
 }
