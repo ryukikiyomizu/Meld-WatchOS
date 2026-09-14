@@ -1108,7 +1108,8 @@ class MainActivity : ComponentActivity() {
                                             Modifier
                                                 .align(Alignment.BottomCenter)
                                                 .padding(
-                                                    horizontal = roundSafePadding,
+                                                    start = roundSafePadding,
+                                                    end = roundSafePadding,
                                                     bottom = roundSafePadding,
                                                 )
                                                 .height(bottomInset + navPadding)
@@ -1327,7 +1328,8 @@ class MainActivity : ComponentActivity() {
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .padding(
-                                    horizontal = roundSafePadding,
+                                    start = roundSafePadding,
+                                    end = roundSafePadding,
                                     bottom = roundSafePadding,
                                 ),
                     )
@@ -1338,7 +1340,8 @@ class MainActivity : ComponentActivity() {
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .padding(
-                                    horizontal = roundSafePadding,
+                                    start = roundSafePadding,
+                                    end = roundSafePadding,
                                     bottom = roundSafePadding,
                                 ),
                     )
