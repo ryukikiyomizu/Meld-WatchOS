@@ -15,6 +15,12 @@ object MediaSessionConstants {
     const val ACTION_TOGGLE_SHUFFLE = "TOGGLE_SHUFFLE"
     const val ACTION_TOGGLE_REPEAT_MODE = "TOGGLE_REPEAT_MODE"
     const val ACTION_ADD_TO_TARGET_PLAYLIST = "ADD_TO_TARGET_PLAYLIST"
+    const val ACTION_SET_SLEEP_TIMER = "SET_SLEEP_TIMER"
+    const val ACTION_CLEAR_SLEEP_TIMER = "CLEAR_SLEEP_TIMER"
+
+    /** Minutes until the sleep timer fires. `-1` means "stop when the current song ends". */
+    const val EXTRA_SLEEP_TIMER_MINUTES = "sleep_timer_minutes"
+    const val EXTRA_SLEEP_TIMER_FADE = "sleep_timer_fade"
 
     val CommandToggleLibrary = SessionCommand(ACTION_TOGGLE_LIBRARY, Bundle.EMPTY)
     val CommandToggleLike = SessionCommand(ACTION_TOGGLE_LIKE, Bundle.EMPTY)
@@ -22,6 +28,8 @@ object MediaSessionConstants {
     val CommandToggleShuffle = SessionCommand(ACTION_TOGGLE_SHUFFLE, Bundle.EMPTY)
     val CommandToggleRepeatMode = SessionCommand(ACTION_TOGGLE_REPEAT_MODE, Bundle.EMPTY)
     val CommandAddToTargetPlaylist = SessionCommand(ACTION_ADD_TO_TARGET_PLAYLIST, Bundle.EMPTY)
+    val CommandSetSleepTimer = SessionCommand(ACTION_SET_SLEEP_TIMER, Bundle.EMPTY)
+    val CommandClearSleepTimer = SessionCommand(ACTION_CLEAR_SLEEP_TIMER, Bundle.EMPTY)
 
     const val TARGET_PLAYLIST_AUTO = "auto"
 }

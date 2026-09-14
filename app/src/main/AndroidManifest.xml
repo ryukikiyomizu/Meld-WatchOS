@@ -251,6 +251,21 @@
             </intent-filter>
         </service>
 
+        <!--
+          Phone half of the Wear OS companion bridge (`:wearApp` sends requests here).
+          No permission is set on purpose: Play Services binds this itself, and requiring
+          BIND_DATA_LAYER_LISTENER would block the connection.
+        -->
+        <service
+            android:name=".wear.WearBridgeService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.BIND_LISTENER"
+                    tools:ignore="WearableBindListener" />
+            </intent-filter>
+        </service>
+
         <!-- Receiver for Listen Together notification actions (Approve/Reject) -->
         <receiver
             android:name=".listentogether.ListenTogetherActionReceiver"

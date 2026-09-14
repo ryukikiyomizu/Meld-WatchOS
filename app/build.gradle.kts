@@ -59,6 +59,14 @@ android {
         buildConfigField("String", "CRASH_REPORT_TOKEN", "\"$crashToken\"")
     }
 
+    // Phone <-> watch bridge protocol. Shared with `:wearApp` from a single source of truth
+    // (see wearbridge/), so the two APKs cannot drift apart on paths or payload keys.
+    sourceSets {
+        getByName("main") {
+            java.srcDir(rootProject.file("wearbridge/src/main/kotlin"))
+        }
+    }
+
     flavorDimensions += listOf("variant")
     productFlavors {
         // FOSS variant (default) - F-Droid compatible, no Google Play Services
@@ -301,6 +309,9 @@ dependencies {
     implementation(libs.protobuf.kotlin.lite)
 
     coreLibraryDesugaring(libs.desugaring)
+
+    // Phone side of the Wear OS companion (browse/search/playback control over the Data Layer).
+    implementation(libs.play.services.wearable)
 
     implementation(libs.timber)
 

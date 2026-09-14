@@ -1097,4 +1097,13 @@
     <string name="switch_to_list_view">Switch to list view</string>
     <string name="switch_to_grid_view">Switch to grid view</string>
     <string name="more_options">More options</string>
+    <!-- Wear OS companion bridge. These are the phone's answers to the watch, shown on the watch. -->
+    <string name="wear_bridge_request_failed">Meld couldn\'t complete that on the phone</string>
+    <string name="wear_bridge_timeout">Meld took too long to answer the watch</string>
+    <string name="wear_bridge_protocol_mismatch">Meld on the phone speaks protocol %1$d; update the phone app</string>
+    <string name="wear_bridge_unreachable">Meld isn\'t reachable on this phone \u2014 open it once, then try again</string>
+    <string name="wear_bridge_nothing_to_play">Nothing to play here</string>
+    <string name="wear_bridge_remove_playing">Can\'t remove the song that is playing</string>
+    <string name="wear_bridge_sleep_range">Sleep timer must be between %1$d and %2$d minutes</string>
+    <string name="wear_bridge_download_needs_library">Not in your library yet \u2014 play it once on the phone first</string>
 </resources>

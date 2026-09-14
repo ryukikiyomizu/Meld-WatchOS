@@ -117,6 +117,8 @@ constructor(
                 .add(MediaSessionConstants.CommandToggleShuffle)
                 .add(MediaSessionConstants.CommandToggleRepeatMode)
                 .add(MediaSessionConstants.CommandAddToTargetPlaylist)
+                .add(MediaSessionConstants.CommandSetSleepTimer)
+                .add(MediaSessionConstants.CommandClearSleepTimer)
                 .build(),
             connectionResult.availablePlayerCommands,
         )
@@ -137,6 +139,22 @@ constructor(
 
             MediaSessionConstants.ACTION_TOGGLE_REPEAT_MODE -> session.player.toggleRepeatMode()
             MediaSessionConstants.ACTION_ADD_TO_TARGET_PLAYLIST -> addToTargetPlaylist()
+            // Sleep timer control for the Wear OS companion (`:wearApp`). `-1` minutes means
+            // "stop when the current song ends", which is SleepTimer's own convention.
+            MediaSessionConstants.ACTION_SET_SLEEP_TIMER ->
+                runCatching {
+                    if (!::service.isInitialized) error("MusicService is not ready yet")
+                    service.sleepTimer.start(
+                        minute = args.getInt(MediaSessionConstants.EXTRA_SLEEP_TIMER_MINUTES, 15),
+                        stopAfterCurrentSong = false,
+                        fadeOut = args.getBoolean(MediaSessionConstants.EXTRA_SLEEP_TIMER_FADE, true),
+                    )
+                }.onFailure { reportException(it) }
+            MediaSessionConstants.ACTION_CLEAR_SLEEP_TIMER ->
+                runCatching {
+                    if (!::service.isInitialized) error("MusicService is not ready yet")
+                    service.sleepTimer.clear()
+                }.onFailure { reportException(it) }
         }
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Player -->
+    <string name="nothing_playing">Nothing playing</string>
+    <string name="pick_from_library">Pick something from your library</string>
+    <string name="queue">Queue</string>
+    <string name="queue_count">%1$d in queue</string>
+    <string name="queue_empty">Queue is empty</string>
+    <string name="library">Library</string>
+    <string name="search">Search</string>
+    <string name="more">More</string>
+    <string name="play">Play</string>
+    <string name="shuffle">Shuffle</string>
+    <string name="start_radio">Play songs like this</string>
+    <string name="start_radio_hint">Radio adds songs similar to this queue</string>
+    <string name="remove_from_queue">Remove from queue</string>
+
+    <!-- Browsing and search -->
+    <string name="nothing_to_show">Nothing here yet</string>
+    <string name="open_meld_on_phone">Open Meld on the phone and try again</string>
+    <string name="retry">Retry</string>
+    <string name="search_hint">Song, artist, album</string>
+    <string name="no_results">Nothing found</string>
+    <string name="no_results_hint">Try a shorter phrase, or search on the phone</string>
+    <string name="voice_unavailable">Voice input isn\'t available</string>
+    <string name="mic">Speak</string>
+    <string name="clear">Clear</string>
+    <string name="backspace">Del</string>
+
+    <!-- Downloads (files live on the phone; the watch browses and prunes them) -->
+    <string name="downloaded">Downloaded</string>
+    <string name="no_downloads_yet">No downloaded songs</string>
+    <string name="remove_download">Remove download</string>
+    <string name="tap_cross_to_remove">Tap the cross to remove a song</string>
+
+    <!-- Sleep timer -->
+    <string name="sleep_timer">Sleep timer</string>
+    <string name="sleep_stops_in">Stops in %1$s</string>
+    <string name="sleep_inactive">No timer running</string>
+    <string name="sleep_end_of_song">End of song</string>
+    <string name="sleep_cancel">Cancel</string>
+
+    <!-- Settings -->
+    <string name="accent">Accent</string>
+    <string name="keep_screen_on">Keep screen on</string>
+    <string name="keep_screen_on_desc">Only while this screen is open</string>
+    <string name="show_artwork">Load artwork</string>
+    <string name="show_artwork_desc">Off saves battery and data</string>
+    <string name="seek_step">Skip length</string>
+
+    <!-- Phone link -->
+    <string name="phone">Phone</string>
+    <string name="link_linked">Connected to your phone</string>
+    <string name="link_no_phone">No paired phone in range</string>
+    <string name="link_silent_phone">Phone is linked, but Meld isn\'t answering</string>
+    <string name="link_checking">Checking…</string>
+    <string name="link_send_failed">Could not reach the phone over Bluetooth</string>
+    <string name="request_rejected">The phone rejected the request</string>
+    <string name="link_device">Phone</string>
+    <string name="link_meld_version">Meld on phone</string>
+    <string name="link_phone_battery">Phone battery</string>
+    <string name="link_latency">Round trip</string>
+    <string name="link_advice">Meld must be allowed to run in the background on the phone. If this keeps dropping, turn off battery optimisation for Meld.</string>
+
+</resources>
