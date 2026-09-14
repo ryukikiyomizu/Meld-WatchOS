@@ -164,6 +164,7 @@ import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.utils.rememberRoundSafePadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -201,6 +202,10 @@ fun BottomSheetPlayer(
     var isFullScreen by rememberSaveable {
         mutableStateOf(false)
     }
+
+    // Round Wear OS displays: keep the controls inside the circle's inscribed
+    // square while the album-art background stays full-bleed.
+    val roundSafePadding = rememberRoundSafePadding()
 
     // Wear OS build: the player always shows the album art as its background
     // (the BLUR style drives the image-background color scheme; the rendering
@@ -1607,6 +1612,7 @@ fun BottomSheetPlayer(
                             .windowInsetsPadding(
                                 WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).add(verticalWindowInsets),
                             ).padding(bottom = 24.dp)
+                            .padding(horizontal = roundSafePadding)
                             .fillMaxSize(),
                 ) {
                     Box(
@@ -1634,6 +1640,7 @@ fun BottomSheetPlayer(
                         modifier =
                             Modifier
                                 .weight(1f, false)
+                                .padding(horizontal = roundSafePadding)
                                 .animateContentSize()
                                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
                     ) {
@@ -1658,6 +1665,7 @@ fun BottomSheetPlayer(
                     modifier =
                         Modifier
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                            .padding(horizontal = roundSafePadding)
                             .padding(bottom = bottomPadding)
                             .animateContentSize(),
                 ) {

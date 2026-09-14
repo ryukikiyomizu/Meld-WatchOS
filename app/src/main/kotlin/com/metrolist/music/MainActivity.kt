@@ -194,6 +194,7 @@ import androidx.datastore.preferences.core.edit
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.utils.rememberRoundSafePadding
 import com.metrolist.music.utils.reportException
 import com.metrolist.spotify.Spotify
 
@@ -602,21 +603,12 @@ class MainActivity : ComponentActivity() {
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
-                // Round Wear OS displays: pad the whole UI by the difference between
-                // the screen radius and its inscribed square so that the top bar,
-                // content and navigation stay inside the visible/touchable circle
-                // instead of spilling into the clipped corners. (1 - 1/sqrt(2)) / 2
+                // Round Wear OS displays: full-screen backgrounds (player album
+                // art) stay full-bleed, while the chrome (top bar, lists, nav,
+                // sheets, menus) is inset into the circle's inscribed square so
+                // nothing spills into the clipped corners. (1 - 1/sqrt(2)) / 2
                 // of the smallest screen dimension.
-                val isRoundDisplay = remember {
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                        resources.configuration.isScreenRound
-                }
-                val roundSafePadding =
-                    if (isRoundDisplay) {
-                        minOf(maxWidth, maxHeight) * 0.1464466f
-                    } else {
-                        0.dp
-                    }
+                val roundSafePadding = rememberRoundSafePadding()
 
                 val navController = rememberNavController()
 
@@ -955,7 +947,13 @@ class MainActivity : ComponentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
-                                Row {
+                                Row(
+                                    Modifier.padding(
+                                        top = roundSafePadding,
+                                        start = roundSafePadding,
+                                        end = roundSafePadding,
+                                    ),
+                                ) {
                                     TopAppBar(
                                         title = {
                                             Text(
@@ -1109,6 +1107,10 @@ class MainActivity : ComponentActivity() {
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
+                                                .padding(
+                                                    horizontal = roundSafePadding,
+                                                    bottom = roundSafePadding,
+                                                )
                                                 .height(bottomInset + navPadding)
                                                 // Use graphicsLayer instead of offset to avoid recomposition
                                                 // graphicsLayer runs during draw phase, not composition phase
@@ -1163,6 +1165,7 @@ class MainActivity : ComponentActivity() {
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
+                                            .padding(horizontal = roundSafePadding)
                                             .align(Alignment.BottomCenter)
                                             .height(bottomInsetDp)
                                             // Use graphicsLayer for background color changes
@@ -1177,10 +1180,13 @@ class MainActivity : ComponentActivity() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .padding(roundSafePadding)
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
-                        Row(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = roundSafePadding),
+                        ) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
                                 remember(navController, coroutineScope, topAppBarScrollBehavior, playerBottomSheetState) {
                                     { screen: Screens, isSelected: Boolean ->
@@ -1317,12 +1323,24 @@ class MainActivity : ComponentActivity() {
 
                     BottomSheetMenu(
                         state = LocalMenuState.current,
-                        modifier = Modifier.align(Alignment.BottomCenter),
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(
+                                    horizontal = roundSafePadding,
+                                    bottom = roundSafePadding,
+                                ),
                     )
 
                     BottomSheetPage(
                         state = LocalBottomSheetPageState.current,
-                        modifier = Modifier.align(Alignment.BottomCenter),
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(
+                                    horizontal = roundSafePadding,
+                                    bottom = roundSafePadding,
+                                ),
                     )
 
                     if (showAccountDialog) {

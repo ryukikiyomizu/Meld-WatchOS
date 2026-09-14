@@ -7,7 +7,13 @@ package com.metrolist.music.utils
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
 import android.util.DisplayMetrics
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /**
  * Global UI scale factor used to fit the phone-oriented UI onto small
@@ -64,3 +70,25 @@ private fun Context.storedDensityScale(): Float =
     } catch (e: Exception) {
         1f
     }
+
+/**
+ * Padding that insets full-width bars (top bars, lists, sheets, menus) into
+ * the largest square inscribed in a round Wear OS display, so they are not
+ * clipped by the circular bezel. The inscribed square of a circle starts
+ * (1 - 1/sqrt(2)) / 2 ~= 0.1464466 of the smallest screen dimension in from
+ * every edge. Returns 0.dp on rectangular displays.
+ */
+@Composable
+fun rememberRoundSafePadding(): Dp {
+    val configuration = LocalConfiguration.current
+    return remember(configuration) {
+        val isRound =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                configuration.isScreenRound
+        if (isRound) {
+            minOf(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp) * 0.1464466f
+        } else {
+            0.dp
+        }
+    }
+}
