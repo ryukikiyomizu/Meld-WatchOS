@@ -89,32 +89,37 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Cache the debug signing key
-        # A freshly generated key on every run means every APK has to be uninstalled before the next
-        # one installs, and uninstalling Meld takes the library and its downloads with it. The Android
-        # debug key is not a release secret, so it can live in the Actions cache between runs.
-        if: always()
-        uses: actions/cache@v5
+      # One debug key shared with `build.yml`'s debug job (same cache path and key), so every CI
+      # artifact — watch or phone — carries the same signature and updates in place. `:app` prefers
+      # app/persistent-debug.keystore over the generated Android debug key as soon as it exists.
+      - name: Restore Persistent Keystore
+        id: debug_keystore
+        uses: actions/cache/restore@v4
         with:
-          path: ~/.android/debug.keystore
+          path: app/persistent-debug.keystore
           key: meld-debug-keystore-v1
 
-      - name: Create a debug keystore for the phone build
-        if: always()
-        # `:app` points its fallback debug signing config at ~/.android/debug.keystore instead of
-        # letting AGP generate one, and CI has no such file, so packaging fails on validateSigning.
-        # This is the same key the Android tools create locally (alias and both passwords "android"),
-        # which keeps the APK installable next to any debug build the phone already has.
+      - name: Create the persistent debug keystore
+        if: steps.debug_keystore.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          keystore="$HOME/.android/debug.keystore"
-          mkdir -p "$(dirname "$keystore")"
-          if [ ! -f "$keystore" ]; then
-            keytool -genkeypair -keystore "$keystore" \
-              -alias androiddebugkey -storepass android -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10950 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
+          keystore=app/persistent-debug.keystore
+          keytool -genkeypair -v \
+            -keystore "$keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10950 \
+            -dname "CN=Meld Debug,O=Meld,C=US"
+
+      - name: Save Persistent Keystore
+        if: always() && steps.debug_keystore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: app/persistent-debug.keystore
+          key: meld-debug-keystore-v1
 
       - name: Assemble the phone debug APK
         # The watch only works next to a phone app built from this same code (it carries the bridge),

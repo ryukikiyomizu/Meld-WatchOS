@@ -133,8 +133,45 @@ jobs:
         run: chmod +x gradlew
 
       - name: Restore Persistent Keystore
+        id: debug_keystore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/persistent-debug.keystore
+          key: meld-debug-keystore-v1
+
+      # Decoding an unset DEBUG_KEYSTORE used to write an empty file here, and `:app` prefers
+      # app/persistent-debug.keystore over its generated debug key as soon as that file exists, so
+      # packaging aborted in :app:package<variant>Debug. Only accept a secret that actually decodes,
+      # otherwise generate the key and cache it: one signature across nightlies means a new APK
+      # installs over the old instead of needing an uninstall, which takes the database with it.
+      - name: Provide the persistent debug keystore
+        if: steps.debug_keystore.outputs.cache-hit != 'true'
+        env:
+          DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
+        shell: bash
         run: |
-          echo "${{ secrets.DEBUG_KEYSTORE }}" | base64 -d > ./app/persistent-debug.keystore
+          keystore=app/persistent-debug.keystore
+          if [ -n "${DEBUG_KEYSTORE:-}" ] && printf '%s' "$DEBUG_KEYSTORE" | base64 -d > "$keystore.tmp" 2>/dev/null && [ -s "$keystore.tmp" ]; then
+            mv "$keystore.tmp" "$keystore"
+          else
+            rm -f "$keystore.tmp"
+            keytool -genkeypair -v \
+              -keystore "$keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10950 \
+              -dname "CN=Meld Debug,O=Meld,C=US"
+          fi
+
+      - name: Save Persistent Keystore
+        if: always() && steps.debug_keystore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: app/persistent-debug.keystore
+          key: meld-debug-keystore-v1
 
       - name: Build Debug APK and Run Lint
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug :app:lint${{ matrix.variantName }}Debug --warning-mode summary
