@@ -66,11 +66,14 @@ android {
         }
     }
 
-    // The Data Layer protocol (paths, actions, payload shapes) is compiled into both this module
-    // and `:app` from one source of truth, so phone and watch can never drift apart.
+    // Phone <-> watch bridge protocol. Shared with `:app` from a single source of truth
+    // (see wearbridge/), so the two APKs cannot drift apart on paths or payload keys.
+    // AGP 9's built-in Kotlin support keeps its own source roots, so `java.srcDir` alone would
+    // leave the package invisible to the compiler: register the root as a Kotlin one too.
     sourceSets {
         getByName("main") {
             java.srcDir(rootProject.file("wearbridge/src/main/kotlin"))
+            kotlin.srcDir(rootProject.file("wearbridge/src/main/kotlin"))
         }
     }
 

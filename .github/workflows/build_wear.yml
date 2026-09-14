@@ -111,10 +111,10 @@ jobs:
             echo '### Build log, errors only'
             echo '```text'
             grep -E "^e: |^> Task .*FAILED|^FAILURE:|What went wrong|Caused by:" "$log" 2>/dev/null \
-              | awk 'NR<=250'
+              | awk 'NR<=400'
             echo '```'
           } >>"$out" 2>/dev/null
-          grep -E "^e: " "$log" 2>/dev/null | awk 'NR<=40' | while IFS= read -r line; do
+          grep -E "^e: " "$log" 2>/dev/null | awk 'NR<=60' | while IFS= read -r line; do
             printf '::error::%s\n' "${line#e: }"
           done
           exit 0
@@ -132,7 +132,7 @@ jobs:
               echo
               echo '```text'
               grep -E "^e: |^> Task .*FAILED|^FAILURE:|What went wrong|Caused by:" "$log" 2>/dev/null \
-                | awk 'NR<=300'
+                | awk 'NR<=450'
               echo '```'
             } | head -c 60000
           )
