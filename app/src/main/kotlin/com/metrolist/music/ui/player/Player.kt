@@ -841,12 +841,12 @@ fun BottomSheetPlayer(
                                             ImageRequest
                                                 .Builder(context)
                                                 .data(thumbnailUrl)
-                                                .size(900, 900)
+                                                .size(120, 120)
                                                 .allowHardware(false)
                                                 .build(),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize().blur(16.dp),
+                                        modifier = Modifier.fillMaxSize(),
                                     )
                                     Box(
                                         modifier =
@@ -1744,7 +1744,7 @@ fun BottomSheetPlayer(
                         Modifier
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                             .padding(horizontal = roundInsets.playerHorizontal)
-                            .padding(bottom = bottomPadding + roundInsets.playerBottom)
+                            .padding(bottom = (if (roundInsets.isRound) 0.dp else bottomPadding) + roundInsets.playerBottom)
                             .animateContentSize()
                             .doublePinchGesture(doublePinchAction != "off", onDoublePinch),
                 ) {
@@ -1766,6 +1766,21 @@ fun BottomSheetPlayer(
 
                     mediaMetadata?.let {
                         controlsContent(it)
+                    }
+
+                    if (roundInsets.isRound) {
+                        Spacer(Modifier.height(14.dp))
+                        PlayerToolsRow(
+                            state = queueSheetState,
+                            playerBottomSheetState = state,
+                            navController = navController,
+                            textBackgroundColor = TextBackgroundColor,
+                            textButtonColor = textButtonColor,
+                            iconButtonColor = iconButtonColor,
+                            playerBackground = playerBackground,
+                            buttonSize = 46.dp,
+                            iconSize = 26.dp,
+                        )
                     }
 
                     Spacer(Modifier.height(30.dp))

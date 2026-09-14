@@ -26,6 +26,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import com.metrolist.music.utils.rememberRoundScreenInsets
+import androidx.compose.ui.text.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.navigation.NavController
@@ -173,17 +175,27 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
     }
 
+    val roundInsets = rememberRoundScreenInsets()
+
     TopAppBar(
-        title = { Text(stringResource(R.string.settings)) },
+        title = {
+            Text(
+                text = stringResource(R.string.settings),
+                textAlign = if (roundInsets.isRound) TextAlign.Center else TextAlign.Start,
+                modifier = if (roundInsets.isRound) Modifier.fillMaxWidth() else Modifier,
+            )
+        },
         navigationIcon = {
-            IconButton(
-                onClick = navController::navigateUp,
-                onLongClick = navController::backToMain
-            ) {
-                Icon(
-                    painterResource(R.drawable.arrow_back),
-                    contentDescription = null
-                )
+            if (!roundInsets.isRound) {
+                IconButton(
+                    onClick = navController::navigateUp,
+                    onLongClick = navController::backToMain
+                ) {
+                    Icon(
+                        painterResource(R.drawable.arrow_back),
+                        contentDescription = null
+                    )
+                }
             }
         }
     )

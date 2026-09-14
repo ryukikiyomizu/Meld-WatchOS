@@ -121,7 +121,7 @@ fun rememberRoundScreenInsets(): RoundScreenInsets {
                 return (r.value - halfChord).dp
             }
 
-            val topBarTop = h * 0.16f
+            val topBarTop = h * 0.14f
             val topBarHorizontal = bandInset(topBarTop, topBarTop + 64.dp) + 4.dp
             val bottomBarBottom = h * 0.12f
             val bottomBarHorizontal = bandInset(h - bottomBarBottom - 72.dp, h - bottomBarBottom) + 4.dp

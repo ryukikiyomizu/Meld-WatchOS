@@ -265,11 +265,11 @@ fun AccountSettings(
                             }
 
                             Text(
-                                text = if (isLoggedIn) accountName else stringResource(R.string.login),
+                                text = if (isLoggedIn) accountName else stringResource(R.string.import_session),
                             )
                         }
                     },
-                    icon = if (!isLoggedIn) painterResource(R.drawable.login) else null,
+                    icon = if (!isLoggedIn) painterResource(R.drawable.restore) else null,
                     trailingContent = {
                         if (isLoggedIn) {
                             OutlinedButton(
@@ -287,11 +287,11 @@ fun AccountSettings(
                         }
                     },
                     onClick = {
-                        onClose()
                         if (isLoggedIn) {
+                            onClose()
                             navController.navigate("account")
                         } else {
-                            navController.navigate("login")
+                            showImportSessionDialog = true
                         }
                     }
                 )

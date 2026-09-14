@@ -945,10 +945,20 @@ class MainActivity : ComponentActivity() {
                                             Modifier
                                                 .fillMaxWidth()
                                                 .padding(top = roundInsets.topBarTop),
-                                        horizontalArrangement =
-                                            Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
-                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
                                     ) {
+                                        Row(
+                                            modifier =
+                                                Modifier
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(
+                                                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                                                    )
+                                                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                                            horizontalArrangement =
+                                                Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
                                         navigationItems.forEach { screen ->
                                             val selected = currentRoute == screen.route
                                             IconButton(
@@ -974,22 +984,23 @@ class MainActivity : ComponentActivity() {
                                                 )
                                             }
                                         }
-                                        IconButton(onClick = { showAccountDialog = true }) {
-                                            if (accountImageUrl != null) {
-                                                AsyncImage(
-                                                    model = accountImageUrl,
-                                                    contentDescription = stringResource(R.string.account),
-                                                    modifier =
-                                                        Modifier
-                                                            .size(24.dp)
-                                                            .clip(CircleShape),
-                                                )
-                                            } else {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.account),
-                                                    contentDescription = stringResource(R.string.account),
-                                                    modifier = Modifier.size(24.dp),
-                                                )
+                                            IconButton(onClick = { showAccountDialog = true }) {
+                                                if (accountImageUrl != null) {
+                                                    AsyncImage(
+                                                        model = accountImageUrl,
+                                                        contentDescription = stringResource(R.string.account),
+                                                        modifier =
+                                                            Modifier
+                                                                .size(24.dp)
+                                                                .clip(CircleShape),
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.account),
+                                                        contentDescription = stringResource(R.string.account),
+                                                        modifier = Modifier.size(24.dp),
+                                                    )
+                                                }
                                             }
                                         }
                                     }
