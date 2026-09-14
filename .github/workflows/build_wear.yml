@@ -22,6 +22,8 @@ on:
       - "wearbridge/**"
       - "app/src/main/kotlin/com/metrolist/music/wear/**"
       - "app/src/main/AndroidManifest.xml"
+      - "app/src/main/kotlin/com/metrolist/music/constants/MediaSessionConstants.kt"
+      - "app/src/main/kotlin/com/metrolist/music/playback/MediaLibrarySessionCallback.kt"
       - "gradle/libs.versions.toml"
       - "settings.gradle.kts"
       - "build.gradle.kts"
@@ -62,9 +64,11 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build wear debug APK
-        # The phone half is compiled here too: it only has to agree with the watch on the wire, and
-        # one job that shows both errors is far quicker to read than two workflows.
+        # The phone half is compiled here too: it only has to agree with the watch on the wire, so
+        # one job that reports both error sets beats reading two workflows' logs.
+        shell: bash
         run: |
+          set -o pipefail
           ./gradlew --console=plain :wearApp:assembleDebug :app:compileFossDebugKotlin \
             --warning-mode summary -x lint 2>&1 | tee "$RUNNER_TEMP/build.log"
         env:
@@ -76,19 +80,31 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
 
       - name: Surface compile errors
-        # Job logs are stored off-platform, so put the actual compiler output where the API and the
-        # UI both show it.
+        # The raw job log lives on blob storage which a headless run cannot fetch, so the compiler
+        # output is mirrored into the step summary and into check-run annotations. Both are served
+        # by github.com and show up on the run page.
         if: failure()
+        shell: bash
         run: |
-          {
-            echo '### Compile errors'
-            echo '```text'
-            grep -E "^e: |^> Task .*(FAILED)|FAILURE:|What went wrong|Caused by:" "$RUNNER_TEMP/build.log" \
-              | sed "s|file://$GITHUB_WORKSPACE/||" | head -n 120 || true
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          log="$RUNNER_TEMP/build.log"
+          if [ ! -f "$log" ]; then
+            echo '::error::Gradle wrote no log; the build step died before starting.'
+            exit 0
+          fi
+          echo '### Build log tail' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          grep -E "^e: |^> Task .*FAILED|FAILURE:|What went wrong|Caused by:|^w: .*unresolved" "$log" \
+            | head -n 200 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r line; do
+            printf '::error::%s\n' "${line#e: }"
+          done < <(grep -E "^e: " "$log" | head -n 40)
+          while IFS= read -r line; do
+            printf '::error::%s\n' "$line"
+          done < <(grep -E -A3 "What went wrong" "$log" | grep -v '^--$' | head -n 16)
 
       - name: Upload wear APK
+        if: success()
         uses: actions/upload-artifact@v6
         with:
           name: meld-wear-debug
