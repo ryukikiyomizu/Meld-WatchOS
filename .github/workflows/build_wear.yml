@@ -90,6 +90,7 @@ jobs:
           retention-days: 30
 
       - name: Create a debug keystore for the phone build
+        if: always()
         # `:app` points its fallback debug signing config at ~/.android/debug.keystore instead of
         # letting AGP generate one, and CI has no such file, so packaging fails on validateSigning.
         # This is the same key the Android tools create locally (alias and both passwords "android"),
