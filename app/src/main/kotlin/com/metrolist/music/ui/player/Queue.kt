@@ -157,13 +157,16 @@ fun PlayerToolsRow(
     state: BottomSheetState,
     playerBottomSheetState: BottomSheetState,
     navController: NavController,
-    textBackgroundColor: Color,
     textButtonColor: Color,
     iconButtonColor: Color,
     playerBackground: PlayerBackgroundStyle,
+    TextBackgroundColor: Color,
     buttonSize: Dp = 42.dp,
     iconSize: Dp = 24.dp,
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val sleepTimerDefaultSetTemplate = stringResource(R.string.sleep_timer_default_set)
     val menuState = LocalMenuState.current
     val bottomSheetPageState = LocalBottomSheetPageState.current
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -593,7 +596,7 @@ fun Queue(
                         state = state,
                         playerBottomSheetState = playerBottomSheetState,
                         navController = navController,
-                        textBackgroundColor = TextBackgroundColor,
+                        TextBackgroundColor = TextBackgroundColor,
                         textButtonColor = textButtonColor,
                         iconButtonColor = iconButtonColor,
                         playerBackground = playerBackground,

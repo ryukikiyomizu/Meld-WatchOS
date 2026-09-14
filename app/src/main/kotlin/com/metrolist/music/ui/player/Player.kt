@@ -1774,7 +1774,7 @@ fun BottomSheetPlayer(
                             state = queueSheetState,
                             playerBottomSheetState = state,
                             navController = navController,
-                            textBackgroundColor = TextBackgroundColor,
+                            TextBackgroundColor = TextBackgroundColor,
                             textButtonColor = textButtonColor,
                             iconButtonColor = iconButtonColor,
                             playerBackground = playerBackground,
