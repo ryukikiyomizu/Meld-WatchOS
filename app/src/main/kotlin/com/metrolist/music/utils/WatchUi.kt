@@ -97,6 +97,7 @@ data class RoundScreenInsets(
     val bottomBarHorizontal: Dp,
     val playerHorizontal: Dp,
     val playerBottom: Dp,
+    val playerTop: Dp,
 )
 
 @Composable
@@ -135,9 +136,10 @@ fun rememberRoundScreenInsets(): RoundScreenInsets {
                 bottomBarHorizontal = bottomBarHorizontal,
                 playerHorizontal = w * 0.10f,
                 playerBottom = h * 0.10f,
+                playerTop = h * 0.05f,
             )
         } else {
-            RoundScreenInsets(false, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp)
+            RoundScreenInsets(false, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp)
         }
     }
 }

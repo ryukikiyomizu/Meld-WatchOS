@@ -1743,6 +1743,7 @@ fun BottomSheetPlayer(
                     modifier =
                         Modifier
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                            .padding(top = roundInsets.playerTop)
                             .padding(horizontal = roundInsets.playerHorizontal)
                             .padding(bottom = (if (roundInsets.isRound) 0.dp else bottomPadding) + roundInsets.playerBottom)
                             .animateContentSize()
@@ -1769,7 +1770,7 @@ fun BottomSheetPlayer(
                     }
 
                     if (roundInsets.isRound) {
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(10.dp))
                         PlayerToolsRow(
                             state = queueSheetState,
                             playerBottomSheetState = state,
@@ -1783,7 +1784,7 @@ fun BottomSheetPlayer(
                         )
                     }
 
-                    Spacer(Modifier.height(30.dp))
+                    Spacer(Modifier.height(if (roundInsets.isRound) 12.dp else 30.dp))
                 }
             }
         }
