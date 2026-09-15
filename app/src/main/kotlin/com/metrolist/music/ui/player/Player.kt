@@ -150,6 +150,7 @@ import com.metrolist.music.constants.SliderStyleKey
 import com.metrolist.music.constants.SquigglySliderKey
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.constants.UseNewPlayerDesignKey
+import androidx.wear.compose.material3.onehandedgesture.oneHandedGesture
 import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.listentogether.RoomRole
@@ -299,6 +300,23 @@ fun BottomSheetPlayer(
             else -> playerConnection.player.togglePlayPause()
         }
     }
+    // Wear OS one-handed gestures (Wear OS 7+): in-air double pinch triggers
+    // the user-configured action on the round player's play/pause control.
+    val oneHandedConfig =
+        androidx.wear.compose.material3.onehandedgesture.rememberOneHandedGestureConfiguration(
+            action = androidx.wear.compose.material3.onehandedgesture.OneHandedGestureAction.Primary,
+        )
+    val pinchModifier =
+        if (roundInsets.isRound && doublePinchAction != "off") {
+            Modifier.oneHandedGesture(
+                gestureConfiguration = oneHandedConfig,
+                onGestureLabel = "player action",
+                onGesture = onDoublePinch,
+            )
+        } else {
+            Modifier
+        }
+
     val keepScreenOn = isPlaying && isKeepScreenOn
 
     DisposableEffect(playerBackground, state.isExpanded, useDarkTheme, keepScreenOn, isFullScreen, hideStatusBarOnFullscreen) {
@@ -1605,6 +1623,7 @@ fun BottomSheetPlayer(
                             Box(
                                 modifier =
                                     Modifier
+                                        .then(pinchModifier)
                                         .size(72.dp)
                                         .clip(RoundedCornerShape(playPauseRoundness))
                                         .background(textButtonColor)
