@@ -151,6 +151,11 @@ import com.metrolist.music.constants.SquigglySliderKey
 import com.metrolist.music.constants.ThumbnailCornerRadius
 import com.metrolist.music.constants.UseNewPlayerDesignKey
 import androidx.wear.compose.material3.onehandedgesture.oneHandedGesture
+import com.metrolist.music.constants.MinimalModeKey
+import com.metrolist.music.constants.AudioOutputKey
+import com.metrolist.music.playback.PlaybackRemote
+import com.metrolist.music.utils.LinkSender
+import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.extensions.toggleRepeatMode
 import com.metrolist.music.listentogether.RoomRole
@@ -375,7 +380,23 @@ fun BottomSheetPlayer(
         }
 
     val playbackState by playerConnection.playbackState.collectAsState()
-    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val localMediaMetadata by playerConnection.mediaMetadata.collectAsState()
+    val (minimalMode) = rememberPreference(MinimalModeKey, false)
+    val (audioOutput, onAudioOutputChange) = rememberPreference(AudioOutputKey, "watch")
+    val remoteState by PlaybackRemote.remoteState.collectAsState()
+    val remotePlayback = minimalMode && roundInsets.isRound && audioOutput == "phone"
+    val mediaMetadata =
+        if (remotePlayback && remoteState != null) {
+            MediaMetadata(
+                id = "remote",
+                title = remoteState?.title.orEmpty(),
+                artists = listOf(MediaMetadata.Artist(id = null, name = remoteState?.artists.orEmpty())),
+                duration = ((remoteState?.duration ?: 0L) / 1000).toInt(),
+                thumbnailUrl = remoteState?.artUrl,
+            )
+        } else {
+            localMediaMetadata
+        }
     val currentSong by playerConnection.currentSong.collectAsState(initial = null)
     val automix by playerConnection.service.automixItems.collectAsState()
     val repeatMode by playerConnection.repeatMode.collectAsState()
@@ -406,7 +427,7 @@ fun BottomSheetPlayer(
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
 
     // Use Cast state when casting, otherwise local player
-    val effectiveIsPlaying = if (isCasting) castIsPlaying else isPlaying
+    val effectiveIsPlaying = if (remotePlayback) remoteState?.isPlaying == true else if (isCasting) castIsPlaying else isPlaying
 
     // Use State objects for position/duration to pass to MiniPlayer without causing recomposition
     // These states persist across playback state changes to ensure continuous progress updates
@@ -1198,6 +1219,16 @@ fun BottomSheetPlayer(
                         }
                     }
                 } else {
+                    if (roundInsets.isRound && minimalMode) {
+                        MinimalModeButtons(
+                            queueSheetState = queueSheetState,
+                            textButtonColor = textButtonColor,
+                            iconButtonColor = iconButtonColor,
+                            audioOutput = audioOutput,
+                            onAudioOutputChange = onAudioOutputChange,
+                            remotePlayback = remotePlayback,
+                        )
+                    } else {
                     Box(
                         modifier =
                             Modifier
@@ -1237,6 +1268,7 @@ fun BottomSheetPlayer(
                         textButtonColor = textButtonColor,
                         iconButtonColor = iconButtonColor,
                     )
+                    }
                 }
             }
 
@@ -1614,7 +1646,13 @@ fun BottomSheetPlayer(
                                             .size(32.dp)
                                             .align(Alignment.Center)
                                             .alpha(if (isListenTogetherGuest) 0.5f else 1f),
-                                    onClick = playerConnection::seekToPrevious,
+                                    onClick = {
+                                        if (remotePlayback) {
+                                            scope.launch { LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "prev") }
+                                        } else {
+                                            playerConnection.seekToPrevious()
+                                        }
+                                    },
                                 )
                             }
 
@@ -1628,6 +1666,10 @@ fun BottomSheetPlayer(
                                         .clip(RoundedCornerShape(playPauseRoundness))
                                         .background(textButtonColor)
                                         .clickable {
+                                            if (remotePlayback) {
+                                                scope.launch { LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "toggle") }
+                                                return@clickable
+                                            }
                                             if (isListenTogetherGuest) {
                                                 playerConnection.toggleMute()
                                                 return@clickable
@@ -1682,7 +1724,13 @@ fun BottomSheetPlayer(
                                             .size(32.dp)
                                             .align(Alignment.Center)
                                             .alpha(if (isListenTogetherGuest) 0.5f else 1f),
-                                    onClick = playerConnection::seekToNext,
+                                    onClick = {
+                                        if (remotePlayback) {
+                                            scope.launch { LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "next") }
+                                        } else {
+                                            playerConnection.seekToNext()
+                                        }
+                                    },
                                 )
                             }
 
@@ -1938,6 +1986,87 @@ private fun PlayerMoreMenuButton(
     ) {
         Image(
             painter = painterResource(R.drawable.more_horiz),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(iconButtonColor),
+        )
+    }
+}
+
+@Composable
+private fun MinimalModeButtons(
+    queueSheetState: BottomSheetState,
+    textButtonColor: Color,
+    iconButtonColor: Color,
+    audioOutput: String,
+    onAudioOutputChange: (String) -> Unit,
+    remotePlayback: Boolean,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var showOutputDialog by remember { mutableStateOf(false) }
+
+    if (showOutputDialog) {
+        DefaultDialog(
+            onDismiss = { showOutputDialog = false },
+            title = { Text(stringResource(R.string.audio_output)) },
+            content = { },
+            buttons = {
+                Column(horizontalAlignment = Alignment.Start) {
+                    listOf(
+                        "watch" to stringResource(R.string.audio_output_watch),
+                        "phone" to stringResource(R.string.audio_output_phone),
+                    ).forEach { (value, label) ->
+                        TextButton(
+                            onClick = {
+                                onAudioOutputChange(value)
+                                showOutputDialog = false
+                                if (value == "phone") {
+                                    scope.launch {
+                                        LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "state")
+                                    }
+                                }
+                            },
+                        ) {
+                            Text(
+                                text = if (value == audioOutput) "\u2022 $label" else label,
+                                fontWeight = if (value == audioOutput) FontWeight.Bold else FontWeight.Normal,
+                            )
+                        }
+                    }
+                }
+            },
+        )
+    }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(textButtonColor)
+                .clickable { showOutputDialog = true },
+    ) {
+        Image(
+            painter = painterResource(if (remotePlayback) R.drawable.phone else R.drawable.volume_up),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(iconButtonColor),
+        )
+    }
+
+    Spacer(modifier = Modifier.size(12.dp))
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(textButtonColor)
+                .clickable { queueSheetState.expand(androidx.compose.animation.core.spring()) },
+    ) {
+        Image(
+            painter = painterResource(R.drawable.queue_music),
             contentDescription = null,
             colorFilter = ColorFilter.tint(iconButtonColor),
         )

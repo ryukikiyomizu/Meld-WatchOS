@@ -26,6 +26,9 @@ import timber.log.Timber
 object LinkSender {
     const val PATH_COPY_LINK = "/meld/copy-link"
     const val PATH_SESSION = "/meld/session"
+    const val PATH_MINIMAL = "/meld/minimal"
+    const val PATH_PLAYBACK = "/meld/playback"
+    const val PATH_PLAYBACK_STATE = "/meld/playback_state"
 
     /** Fast peer-node probe (no retry loop) used for offload decisions. */
     suspend fun hasConnectedNodeQuick(context: Context): Boolean =

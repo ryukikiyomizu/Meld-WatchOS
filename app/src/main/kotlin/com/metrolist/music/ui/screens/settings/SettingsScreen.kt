@@ -36,6 +36,10 @@ import com.metrolist.music.BuildConfig
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.ui.component.IconButton
+import com.metrolist.music.constants.MinimalModeKey
+import com.metrolist.music.utils.LinkSender
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.ReleaseNotesCard
@@ -49,6 +53,9 @@ fun SettingsScreen(
     navController: NavController,
     latestVersionName: String,
 ) {
+    val (minimalMode, onMinimalModeChange) = rememberPreference(MinimalModeKey, false)
+    val scope = rememberCoroutineScope()
+
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -76,6 +83,59 @@ fun SettingsScreen(
                 )
             )
         )
+
+        // Minimal mode (watch <-> phone head-unit mode)
+        Material3SettingsGroup(
+            title = stringResource(R.string.minimal_mode),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.phone),
+                    title = { Text(stringResource(R.string.minimal_mode)) },
+                    description = { Text(stringResource(R.string.minimal_mode_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = minimalMode,
+                            onCheckedChange = { on ->
+                                scope.launch {
+                                    if (on && !LinkSender.hasConnectedNodeQuick(context)) {
+                                        android.widget.Toast
+                                            .makeText(context, R.string.minimal_connect_required, android.widget.Toast.LENGTH_SHORT)
+                                            .show()
+                                        return@launch
+                                    }
+                                    onMinimalModeChange(on)
+                                    LinkSender.send(context, LinkSender.PATH_MINIMAL, if (on) "1" else "0")
+                                }
+                            },
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (minimalMode) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = {
+                        scope.launch {
+                            val on = !minimalMode
+                            if (on && !LinkSender.hasConnectedNodeQuick(context)) {
+                                android.widget.Toast
+                                    .makeText(context, R.string.minimal_connect_required, android.widget.Toast.LENGTH_SHORT)
+                                    .show()
+                                return@launch
+                            }
+                            onMinimalModeChange(on)
+                            LinkSender.send(context, LinkSender.PATH_MINIMAL, if (on) "1" else "0")
+                        }
+                    }
+                )
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // User Interface Section
         Material3SettingsGroup(

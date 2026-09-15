@@ -1129,6 +1129,12 @@
     <string name="login_use_channel">Use this channel</string>
     <string name="login_channel_hint">Need another channel? Switch in YouTube Music&#8217;s account menu first, then continue.</string>
     <string name="switch_channel">Switch channel</string>
+    <string name="minimal_mode">Minimal mode</string>
+    <string name="minimal_mode_desc">Watch becomes a remote player head-unit; the phone controls the library</string>
+    <string name="minimal_connect_required">Connect the watch and phone first</string>
+    <string name="audio_output">Audio output</string>
+    <string name="audio_output_watch">Watch (this device)</string>
+    <string name="audio_output_phone">Phone</string>
     <string name="wear_battery_sync">Wear battery &amp; sync</string>
     <string name="wear_battery_saver">Battery saver</string>
     <string name="wear_battery_saver_desc">Stops marquee animation and auto-sync on the watch</string>

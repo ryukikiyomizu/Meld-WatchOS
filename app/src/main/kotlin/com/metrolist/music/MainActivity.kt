@@ -194,6 +194,8 @@ import androidx.datastore.preferences.core.edit
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.constants.MinimalModeKey
+import com.metrolist.music.playback.PlaybackRemote
 import com.metrolist.music.utils.rememberRoundScreenInsets
 import com.metrolist.music.utils.reportException
 import com.metrolist.spotify.Spotify
@@ -272,6 +274,7 @@ class MainActivity : ComponentActivity() {
                     try {
                         playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                         playerConnectionSnapshot = playerConnection
+                            PlaybackRemote.playerConnection = playerConnection
                         Timber.tag("MainActivity").d("PlayerConnection created successfully")
                         // Connect Listen Together manager to player
                         listenTogetherManager.setPlayerConnection(playerConnection)
@@ -283,6 +286,7 @@ class MainActivity : ComponentActivity() {
                             try {
                                 playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                                 playerConnectionSnapshot = playerConnection
+                            PlaybackRemote.playerConnection = playerConnection
                                 listenTogetherManager.setPlayerConnection(playerConnection)
                             } catch (e2: Exception) {
                                 Timber.tag("MainActivity").e(e2, "Failed to create PlayerConnection on retry")
@@ -653,12 +657,13 @@ class MainActivity : ComponentActivity() {
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
                 val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = true)
+                val (minimalMode) = rememberPreference(MinimalModeKey, false)
                 val navigationItems =
-                    remember(listenTogetherInTopBar) {
-                        if (listenTogetherInTopBar) {
-                            Screens.MainScreens.filter { it != Screens.ListenTogether }
-                        } else {
-                            Screens.MainScreens
+                    remember(listenTogetherInTopBar, minimalMode, roundInsets.isRound) {
+                        when {
+                            minimalMode && roundInsets.isRound -> listOf(Screens.Home)
+                            listenTogetherInTopBar -> Screens.MainScreens.filter { it != Screens.ListenTogether }
+                            else -> Screens.MainScreens
                         }
                     }
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
@@ -757,6 +762,13 @@ class MainActivity : ComponentActivity() {
                         expandedBound = maxHeight,
                     )
 
+
+                // Minimal mode: the watch lives inside the player.
+                LaunchedEffect(minimalMode) {
+                    if (minimalMode && roundInsets.isRound) {
+                        playerBottomSheetState.expand(androidx.compose.animation.core.spring())
+                    }
+                }
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
