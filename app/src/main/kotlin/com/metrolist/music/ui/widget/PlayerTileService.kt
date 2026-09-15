@@ -6,13 +6,14 @@ import androidx.wear.protolayout.DeviceParametersBuilders.DeviceParameters
 import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.DimensionBuilders.expand
 import androidx.wear.protolayout.DimensionBuilders.sp
-import androidx.wear.protolayout.EdgeBuilders
 import androidx.wear.protolayout.LayoutElementBuilders
 import androidx.wear.protolayout.ModifiersBuilders
 import androidx.wear.protolayout.TimelineBuilders.Timeline
 import androidx.wear.protolayout.TimelineBuilders.TimelineEntry
+import androidx.wear.protolayout.HorizontalAlignment
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.ResourceBuilders
+import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -35,10 +36,16 @@ import kotlinx.coroutines.flow.first
  * "connect to phone or turn off minimal mode" toast live there.
  */
 class PlayerTileService : TileService() {
-    override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<Timeline> =
-        Futures.immediateFuture(buildTimeline())
+    override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> =
+        Futures.immediateFuture(
+            TileBuilders.Tile
+                .Builder()
+                .setTimeline(buildTimeline())
+                .setResourcesVersion("1")
+                .build(),
+        )
 
-    override fun onTileResourcesRequest(requestParams: ResourceBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> =
+    override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> =
         Futures.immediateFuture(
             ResourceBuilders.Resources
                 .Builder()
@@ -90,7 +97,7 @@ class PlayerTileService : TileService() {
                                 .setClassName(MainActivity::class.java.name)
                                 .addKeyToExtraMapping(
                                     "from_tile",
-                                    ActionBuilders.BoolExtra.Builder().setValue(true).build(),
+                                    ActionBuilders.AndroidBooleanExtra.Builder().setValue(true).build(),
                                 ).build(),
                         ).build(),
                 ).build()
@@ -99,7 +106,7 @@ class PlayerTileService : TileService() {
             LayoutElementBuilders.Column
                 .Builder()
                 .setWidth(expand())
-                .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGNMENT_CENTER)
+                .setHorizontalAlignment(HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER)
                 .addContent(
                     text(title, 15f, 0xFFFFFFFF.toInt(), bold = true, maxLines = 1),
                 ).addContent(spacer(4f))
@@ -119,12 +126,7 @@ class PlayerTileService : TileService() {
                     ModifiersBuilders.Modifiers
                         .Builder()
                         .setClickable(clickable)
-                        .setPadding(
-                            EdgeBuilders.Padding
-                                .Builder()
-                                .setAll(dp(16f))
-                                .build(),
-                        ).build(),
+                        .build(),
                 ).addContent(column)
                 .build()
 
@@ -151,7 +153,7 @@ class PlayerTileService : TileService() {
     ) = LayoutElementBuilders.Text
         .Builder()
         .setText(value)
-        .setMultilineAlignment(LayoutElementBuilders.HORIZONTAL_ALIGNMENT_CENTER)
+        .setMultilineAlignment(HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER)
         .setMaxLines(maxLines)
         .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE_END)
         .setFontStyle(
