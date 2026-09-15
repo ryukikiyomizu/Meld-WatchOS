@@ -136,6 +136,19 @@ fun AccountSettings(
 
         Spacer(Modifier.height(12.dp))
 
+        if (isLoggedIn) {
+            OutlinedButton(
+                onClick = {
+                    onClose()
+                    navController.navigate("login")
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.switch_channel))
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
         // Logout confirmation dialog
         if (showLogoutDialog) {
             DefaultDialog(

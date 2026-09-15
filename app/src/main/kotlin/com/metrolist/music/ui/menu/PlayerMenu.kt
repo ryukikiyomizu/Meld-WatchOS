@@ -406,7 +406,7 @@ fun PlayerMenu(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             },
-                            text = stringResource(R.string.send_link),
+                            text = stringResource(if (LocalContext.current.resources.configuration.isScreenRound) R.string.send_link_watch else R.string.send_link),
                             onClick = {
                                 onDismiss()
                                 coroutineScope.launch {

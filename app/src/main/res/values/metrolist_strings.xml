@@ -1125,6 +1125,10 @@
     <string name="link_send_failed">Couldn\'t reach the paired phone</string>
     <string name="link_no_node">No Meld node found. Install Meld on the paired device and open it once, then retry.</string>
     <string name="link_service_unavailable">Wearable service not ready. Check Google Play services and Bluetooth.</string>
+    <string name="send_link_watch">Send link</string>
+    <string name="login_use_channel">Use this channel</string>
+    <string name="login_channel_hint">Need another channel? Switch in YouTube Music&#8217;s account menu first, then continue.</string>
+    <string name="switch_channel">Switch channel</string>
     <string name="credits_porter">Developer (Porter)</string>
     <string name="double_pinch">Double pinch</string>
     <string name="double_pinch_description">Pinch twice quickly on the player to trigger the selected action.</string>

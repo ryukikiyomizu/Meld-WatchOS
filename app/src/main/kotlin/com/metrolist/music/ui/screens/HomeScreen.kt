@@ -1212,6 +1212,11 @@ fun HomeScreen(
                 state = lazylistState,
                 contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
             ) {
+                if (roundInsets.isRound) {
+                    item(key = "round_top_spacer") {
+                        Spacer(Modifier.height(10.dp))
+                    }
+                }
                 if (!roundInsets.isRound) {
                     item {
                         ChipsRow(
