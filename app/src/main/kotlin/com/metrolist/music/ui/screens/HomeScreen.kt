@@ -2888,6 +2888,7 @@ fun HomeScreen(
 
 
 /** Item placement animations are costly on watch GPUs; skip them there. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Modifier.watchAnimateItem(): Modifier =
     if (LocalConfiguration.current.isScreenRound) this else this.animateItem()
