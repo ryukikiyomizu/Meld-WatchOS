@@ -55,11 +55,24 @@ fun SettingsScreen(
     navController: NavController,
     latestVersionName: String,
 ) {
-    val (minimalMode, onMinimalModeChange) = rememberPreference(MinimalModeKey, false)
-    val scope = rememberCoroutineScope()
-
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
+    val (minimalMode, onMinimalModeChange) = rememberPreference(MinimalModeKey, false)
+    val scope = rememberCoroutineScope()
+    val setMinimalMode: (Boolean) -> Unit = { on ->
+        scope.launch {
+            // Flip immediately so both devices' settings stay snappy; then
+            // verify the peer actually got the signal and revert if it didn't.
+            onMinimalModeChange(on)
+            val result = LinkSender.send(context, LinkSender.PATH_MINIMAL, if (on) "1" else "0")
+            if (on && result.wearableReady && result.nodesFound == 0) {
+                onMinimalModeChange(false)
+                android.widget.Toast
+                    .makeText(context, R.string.minimal_connect_required, android.widget.Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+    }
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val hasAndroidAuto = remember {
         try {
@@ -97,18 +110,7 @@ fun SettingsScreen(
                     trailingContent = {
                         Switch(
                             checked = minimalMode,
-                            onCheckedChange = { on ->
-                                scope.launch {
-                                    if (on && !LinkSender.hasConnectedNodeQuick(context)) {
-                                        android.widget.Toast
-                                            .makeText(context, R.string.minimal_connect_required, android.widget.Toast.LENGTH_SHORT)
-                                            .show()
-                                        return@launch
-                                    }
-                                    onMinimalModeChange(on)
-                                    LinkSender.send(context, LinkSender.PATH_MINIMAL, if (on) "1" else "0")
-                                }
-                            },
+                            onCheckedChange = { on -> setMinimalMode(on) },
                             thumbContent = {
                                 Icon(
                                     painter = painterResource(
@@ -120,19 +122,7 @@ fun SettingsScreen(
                             }
                         )
                     },
-                    onClick = {
-                        scope.launch {
-                            val on = !minimalMode
-                            if (on && !LinkSender.hasConnectedNodeQuick(context)) {
-                                android.widget.Toast
-                                    .makeText(context, R.string.minimal_connect_required, android.widget.Toast.LENGTH_SHORT)
-                                    .show()
-                                return@launch
-                            }
-                            onMinimalModeChange(on)
-                            LinkSender.send(context, LinkSender.PATH_MINIMAL, if (on) "1" else "0")
-                        }
-                    }
+                    onClick = { setMinimalMode(!minimalMode) }
                 )
             )
         )

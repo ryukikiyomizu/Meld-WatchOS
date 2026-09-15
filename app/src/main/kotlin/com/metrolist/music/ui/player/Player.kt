@@ -1227,6 +1227,8 @@ fun BottomSheetPlayer(
                             audioOutput = audioOutput,
                             onAudioOutputChange = onAudioOutputChange,
                             remotePlayback = remotePlayback,
+                            minimalMode = minimalMode,
+                            onMinimalModeChange = onMinimalModeChange,
                         )
                     } else {
                     Box(
@@ -2000,6 +2002,8 @@ private fun MinimalModeButtons(
     audioOutput: String,
     onAudioOutputChange: (String) -> Unit,
     remotePlayback: Boolean,
+    minimalMode: Boolean,
+    onMinimalModeChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -2012,17 +2016,31 @@ private fun MinimalModeButtons(
             content = { },
             buttons = {
                 Column(horizontalAlignment = Alignment.Start) {
-                    listOf(
-                        "watch" to stringResource(R.string.audio_output_watch),
-                        "phone" to stringResource(R.string.audio_output_phone),
+                    (
+                        listOf(
+                            "watch" to stringResource(R.string.audio_output_watch),
+                            "phone" to stringResource(R.string.audio_output_phone),
+                        ) +
+                            if (minimalMode) {
+                                listOf("off" to stringResource(R.string.minimal_mode_off))
+                            } else {
+                                emptyList()
+                            }
                     ).forEach { (value, label) ->
                         TextButton(
                             onClick = {
-                                onAudioOutputChange(value)
                                 showOutputDialog = false
-                                if (value == "phone") {
+                                if (value == "off") {
+                                    onMinimalModeChange(false)
                                     scope.launch {
-                                        LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "state")
+                                        LinkSender.send(context.applicationContext, LinkSender.PATH_MINIMAL, "0")
+                                    }
+                                } else {
+                                    onAudioOutputChange(value)
+                                    if (value == "phone") {
+                                        scope.launch {
+                                            LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "state")
+                                        }
                                     }
                                 }
                             },

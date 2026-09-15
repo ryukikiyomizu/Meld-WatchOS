@@ -1132,6 +1132,7 @@
     <string name="minimal_mode">Minimal mode</string>
     <string name="minimal_mode_desc">Watch becomes a remote player head-unit; the phone controls the library</string>
     <string name="minimal_connect_required">Connect the watch and phone first</string>
+    <string name="minimal_mode_off">Turn off Minimal mode</string>
     <string name="audio_output">Audio output</string>
     <string name="audio_output_watch">Watch (this device)</string>
     <string name="audio_output_phone">Phone</string>
