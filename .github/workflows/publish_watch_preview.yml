@@ -122,7 +122,7 @@ jobs:
 
           Debug-signed build of the FOSS variant for testing on Wear OS watches.
           Install with: adb install meld-watchos-preview.apk" \
-              out/meld-watchos-preview.apk
+              out/meld-watchos-preview.apk \
               out/meld-android-preview.apk
           fi
           echo "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
