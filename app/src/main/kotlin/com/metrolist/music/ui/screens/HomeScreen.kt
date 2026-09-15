@@ -77,6 +77,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -174,7 +175,11 @@ import com.metrolist.music.ui.menu.YouTubePlaylistMenu
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.utils.SnapLayoutInfoProvider
 import com.metrolist.music.utils.rememberRoundScreenInsets
-import com.metrolist.music.utils.watchAnimateItem
+
+/** Item placement animations are costly on watch GPUs; skip them there. */
+@Composable
+fun Modifier.watchAnimateItem(): Modifier =
+    if (LocalConfiguration.current.isScreenRound) this else this.animateItem()
 import com.metrolist.music.utils.isSpotifyId
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference

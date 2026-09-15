@@ -117,11 +117,6 @@ fun Modifier.listMarquee(): Modifier =
         this.basicMarquee()
     }
 
-/** Item placement animations are costly on watch GPUs; skip them there. */
-@Composable
-fun Modifier.watchAnimateItem(): Modifier =
-    if (LocalConfiguration.current.isScreenRound) this else this.animateItem()
-
 @Composable
 fun rememberRoundScreenInsets(): RoundScreenInsets {
     val configuration = LocalConfiguration.current
