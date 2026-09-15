@@ -675,6 +675,7 @@ fun ContentSettings(
             DefaultDialog(
                 onDismiss = { showSyncPolicyDialog = false },
                 title = { Text(stringResource(R.string.auto_sync_policy)) },
+                content = { },
                 buttons = {
                     Column(horizontalAlignment = Alignment.Start) {
                         listOf(
