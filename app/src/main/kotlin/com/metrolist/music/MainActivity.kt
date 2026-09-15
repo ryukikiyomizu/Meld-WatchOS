@@ -389,6 +389,27 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Tile transport buttons: execute the playback command and exit
+        // immediately so the app never visibly opens.
+        val tileClickable = intent?.getStringExtra(androidx.wear.tiles.TileService.EXTRA_CLICKABLE_ID)
+        if (tileClickable != null) {
+            val cmd =
+                when (tileClickable) {
+                    "meld_tile_prev" -> "prev"
+                    "meld_tile_toggle" -> "toggle"
+                    "meld_tile_next" -> "next"
+                    else -> null
+                }
+            if (cmd != null) {
+                lifecycleScope.launch {
+                    LinkSender.send(applicationContext, LinkSender.PATH_PLAYBACK, cmd)
+                }
+            }
+            finish()
+            return
+        }
+
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
 

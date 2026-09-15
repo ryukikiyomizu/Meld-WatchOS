@@ -381,7 +381,7 @@ fun BottomSheetPlayer(
 
     val playbackState by playerConnection.playbackState.collectAsState()
     val localMediaMetadata by playerConnection.mediaMetadata.collectAsState()
-    val (minimalMode) = rememberPreference(MinimalModeKey, false)
+    val (minimalMode, onMinimalModeChange) = rememberPreference(MinimalModeKey, false)
     val (audioOutput, onAudioOutputChange) = rememberPreference(AudioOutputKey, "watch")
     val remoteState by PlaybackRemote.remoteState.collectAsState()
     val remotePlayback = minimalMode && roundInsets.isRound && audioOutput == "phone"

@@ -1,8 +1,5 @@
 package com.metrolist.music.ui.widget
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import androidx.core.content.ContextCompat
 import androidx.wear.protolayout.ActionBuilders
 import androidx.wear.protolayout.ColorBuilders
 import androidx.wear.protolayout.DimensionBuilders.dp
@@ -12,7 +9,6 @@ import androidx.wear.protolayout.LayoutElementBuilders
 import androidx.wear.protolayout.ModifiersBuilders
 import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.protolayout.TimelineBuilders
-import androidx.wear.tiles.EventBuilders
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
@@ -28,7 +24,6 @@ import com.metrolist.music.utils.dataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
-import java.io.ByteArrayOutputStream
 
 /**
  * Wear OS tile: a glanceable mini-player.
@@ -53,25 +48,6 @@ class PlayerTileService : TileService() {
 
     override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> =
         Futures.immediateFuture(buildResources())
-
-    override fun onRecentInteractionEventsAsync(events: List<EventBuilders.TileInteractionEvent>) {
-        for (event in events) {
-            val cmd =
-                when (event.clickable.id) {
-                    ID_PREV -> "prev"
-                    ID_TOGGLE -> "toggle"
-                    ID_NEXT -> "next"
-                    else -> continue
-                }
-            try {
-                runBlocking {
-                    LinkSender.send(applicationContext, LinkSender.PATH_PLAYBACK, cmd)
-                }
-            } catch (e: Exception) {
-                Timber.w(e, "PlayerTile: control send failed")
-            }
-        }
-    }
 
     private fun artUrl(): String? = PlaybackRemote.remoteState.value?.artUrl
 
@@ -159,17 +135,24 @@ class PlayerTileService : TileService() {
                 }.addContent(headerTexts)
                 .build()
 
-        val controls =
+        val controlsRow =
             LayoutElementBuilders.Row
                 .Builder()
-                .setWidth(expand())
-                .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
                 .setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER)
                 .addContent(controlImage("ic_prev", ID_PREV, 26f))
                 .addContent(spacerWidth(22f))
                 .addContent(controlImage(if (isPlaying) "ic_pause" else "ic_play", ID_TOGGLE, 36f))
                 .addContent(spacerWidth(22f))
                 .addContent(controlImage("ic_next", ID_NEXT, 26f))
+                .build()
+
+        val controls =
+            LayoutElementBuilders.Box
+                .Builder()
+                .setWidth(expand())
+                .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+                .setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER)
+                .addContent(controlsRow)
                 .build()
 
         return LayoutElementBuilders.Column
@@ -243,7 +226,17 @@ class PlayerTileService : TileService() {
                     ModifiersBuilders.Clickable
                         .Builder()
                         .setId(clickableId)
-                        .build(),
+                        .setOnClick(
+                            ActionBuilders.LaunchAction
+                                .Builder()
+                                .setAndroidActivity(
+                                    ActionBuilders.AndroidActivity
+                                        .Builder()
+                                        .setPackageName(packageName)
+                                        .setClassName(MainActivity::class.java.name)
+                                        .build(),
+                                ).build(),
+                        ).build(),
                 ).build(),
         ).build()
 
@@ -252,58 +245,42 @@ class PlayerTileService : TileService() {
             ResourceBuilders.Resources
                 .Builder()
                 .setVersion(resourcesVersion())
-                .addIdToImageMapping("ic_prev", inlineResource(R.drawable.ic_widget_skip_previous, 64))
-                .addIdToImageMapping("ic_play", inlineResource(R.drawable.ic_widget_play, 96))
-                .addIdToImageMapping("ic_pause", inlineResource(R.drawable.ic_widget_pause, 96))
-                .addIdToImageMapping("ic_next", inlineResource(R.drawable.ic_widget_skip_next, 64))
+                .addIdToImageMapping("ic_prev", androidResource(R.drawable.ic_widget_skip_previous))
+                .addIdToImageMapping("ic_play", androidResource(R.drawable.ic_widget_play))
+                .addIdToImageMapping("ic_pause", androidResource(R.drawable.ic_widget_pause))
+                .addIdToImageMapping("ic_next", androidResource(R.drawable.ic_widget_skip_next))
 
         artUrl()?.let { url ->
-            val png = downloadImage(url) ?: rasterize(R.drawable.ic_launcher_foreground, 128)
-            builder.addIdToImageMapping(
-                "art",
-                ResourceBuilders.ImageResource
-                    .Builder()
-                    .setInlineImageResource(
-                        ResourceBuilders.InlineImageResource
-                            .Builder()
-                            .setData(png)
-                            .build(),
-                    ).build(),
-            )
+            val png = downloadImage(url)
+            if (png != null) {
+                builder.addIdToImageMapping(
+                    "art",
+                    ResourceBuilders.ImageResource
+                        .Builder()
+                        .setInlineResource(
+                            ResourceBuilders.InlineImageResource
+                                .Builder()
+                                .setData(png)
+                                .build(),
+                        ).build(),
+                )
+            } else {
+                builder.addIdToImageMapping("art", androidResource(R.drawable.ic_launcher_foreground))
+            }
         }
 
         return builder.build()
     }
 
-    private fun inlineResource(
-        resId: Int,
-        sizePx: Int,
-    ): ResourceBuilders.ImageResource =
+    private fun androidResource(resId: Int): ResourceBuilders.ImageResource =
         ResourceBuilders.ImageResource
             .Builder()
-            .setInlineImageResource(
-                ResourceBuilders.InlineImageResource
+            .setAndroidResourceByResId(
+                ResourceBuilders.AndroidImageResourceByResId
                     .Builder()
-                    .setData(rasterize(resId, sizePx))
+                    .setResourceId(resId)
                     .build(),
             ).build()
-
-    private fun rasterize(
-        resId: Int,
-        sizePx: Int,
-    ): ByteArray =
-        try {
-            val drawable = ContextCompat.getDrawable(this, resId)!!
-            drawable.setBounds(0, 0, sizePx, sizePx)
-            val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-            drawable.draw(Canvas(bitmap))
-            val out = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            out.toByteArray()
-        } catch (e: Exception) {
-            Timber.w(e, "PlayerTile: drawable rasterize failed")
-            ByteArray(0)
-        }
 
     private fun downloadImage(url: String): ByteArray? =
         try {
