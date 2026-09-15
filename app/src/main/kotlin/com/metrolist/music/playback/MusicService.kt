@@ -2327,6 +2327,9 @@ class MusicService :
         }
         previousMediaItemIndex = player.currentMediaItemIndex
 
+        // Minimal mode "Audio Output = Watch": pump this song's bytes over.
+        AudioStreamPump.sync(this, player, mediaItem?.metadata?.id)
+
         lastPlaybackSpeed = -1.0f // force update song
 
         setupLoudnessEnhancer()

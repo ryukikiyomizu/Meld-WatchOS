@@ -29,6 +29,7 @@ object LinkSender {
     const val PATH_MINIMAL = "/meld/minimal"
     const val PATH_PLAYBACK = "/meld/playback"
     const val PATH_PLAYBACK_STATE = "/meld/playback_state"
+    const val PATH_OUTPUT = "/meld/output"
 
     /** Fast peer-node probe (no retry loop) used for offload decisions. */
     suspend fun hasConnectedNodeQuick(context: Context): Boolean =

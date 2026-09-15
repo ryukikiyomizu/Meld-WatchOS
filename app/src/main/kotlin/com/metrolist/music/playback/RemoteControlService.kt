@@ -2,6 +2,7 @@ package com.metrolist.music.playback
 
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
+import com.metrolist.music.constants.AudioOutputKey
 import com.metrolist.music.constants.MinimalModeKey
 import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.utils.LinkSender
@@ -27,8 +28,17 @@ class RemoteControlService : WearableListenerService() {
             }
             LinkSender.PATH_PLAYBACK -> handleCommand(String(event.data))
             LinkSender.PATH_PLAYBACK_STATE -> handleState(String(event.data))
+            LinkSender.PATH_OUTPUT -> handleOutput(String(event.data))
             else -> return
         }
+    }
+
+    private fun handleOutput(output: String) {
+        runBlocking { dataStore.edit { it[AudioOutputKey] = output } }
+        Timber.d("RemoteControlService: audio output -> $output")
+        val connection = PlaybackRemote.playerConnection
+        AudioStreamPump.sync(applicationContext, connection?.player, connection?.mediaMetadata?.value?.id)
+        refreshTile()
     }
 
     private fun handleCommand(cmd: String) {
@@ -51,6 +61,7 @@ class RemoteControlService : WearableListenerService() {
         val player = connection.player
         val json =
             JSONObject()
+                .put("id", meta?.id ?: "")
                 .put("title", meta?.title ?: "")
                 .put("artists", meta?.artists?.joinToString(", ") ?: "")
                 .put("art", meta?.thumbnailUrl ?: JSONObject.NULL)
@@ -65,8 +76,11 @@ class RemoteControlService : WearableListenerService() {
     private fun handleState(data: String) {
         try {
             val json = JSONObject(data)
+            val trackId = json.optString("id")
+            val previousId = PlaybackRemote.remoteState.value?.id
             PlaybackRemote.remoteState.value =
                 PlaybackRemote.State(
+                    id = trackId,
                     title = json.optString("title"),
                     artists = json.optString("artists"),
                     artUrl = json.optString("art", "").takeIf { it.isNotBlank() },
@@ -74,6 +88,9 @@ class RemoteControlService : WearableListenerService() {
                     position = json.optLong("position"),
                     duration = json.optLong("duration"),
                 )
+            if (trackId.isNotEmpty() && trackId != previousId) {
+                WatchStreamPlayer.restartSource(applicationContext, trackId)
+            }
             refreshTile()
         } catch (e: Exception) {
             Timber.w(e, "RemoteControlService: bad state payload")

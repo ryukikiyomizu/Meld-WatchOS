@@ -392,6 +392,18 @@
         </service>
 
         <service
+            android:name=".playback.AudioStreamReceiverService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/meld/audio"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+
+        <service
             android:name=".playback.RemoteControlService"
             android:exported="true"
             tools:ignore="ExportedService">

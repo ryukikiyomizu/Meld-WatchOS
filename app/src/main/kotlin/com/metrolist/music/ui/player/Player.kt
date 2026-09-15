@@ -154,6 +154,7 @@ import androidx.wear.compose.material3.onehandedgesture.oneHandedGesture
 import com.metrolist.music.constants.MinimalModeKey
 import com.metrolist.music.constants.AudioOutputKey
 import com.metrolist.music.playback.PlaybackRemote
+import com.metrolist.music.playback.WatchStreamPlayer
 import com.metrolist.music.utils.LinkSender
 import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.extensions.togglePlayPause
@@ -385,6 +386,15 @@ fun BottomSheetPlayer(
     val (audioOutput, onAudioOutputChange) = rememberPreference(AudioOutputKey, "watch")
     val remoteState by PlaybackRemote.remoteState.collectAsState()
     val remotePlayback = minimalMode && roundInsets.isRound && audioOutput == "phone"
+    val watchStream = minimalMode && roundInsets.isRound && audioOutput == "watch"
+    val watchStreamPlaying by WatchStreamPlayer.isPlayingFlow.collectAsState()
+
+    // Tell the phone where the sound should come out.
+    LaunchedEffect(audioOutput) {
+        if (minimalMode && roundInsets.isRound) {
+            LinkSender.send(context.applicationContext, LinkSender.PATH_OUTPUT, audioOutput)
+        }
+    }
     val mediaMetadata =
         if (remotePlayback && remoteState != null) {
             MediaMetadata(
@@ -427,7 +437,7 @@ fun BottomSheetPlayer(
     val castIsPlaying by castHandler?.castIsPlaying?.collectAsState() ?: remember { mutableStateOf(false) }
 
     // Use Cast state when casting, otherwise local player
-    val effectiveIsPlaying = if (remotePlayback) remoteState?.isPlaying == true else if (isCasting) castIsPlaying else isPlaying
+    val effectiveIsPlaying = if (watchStream) watchStreamPlaying else if (remotePlayback) remoteState?.isPlaying == true else if (isCasting) castIsPlaying else isPlaying
 
     // Use State objects for position/duration to pass to MiniPlayer without causing recomposition
     // These states persist across playback state changes to ensure continuous progress updates
@@ -1649,7 +1659,7 @@ fun BottomSheetPlayer(
                                             .align(Alignment.Center)
                                             .alpha(if (isListenTogetherGuest) 0.5f else 1f),
                                     onClick = {
-                                        if (remotePlayback) {
+                                        if (remotePlayback || watchStream) {
                                             scope.launch { LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "prev") }
                                         } else {
                                             playerConnection.seekToPrevious()
@@ -1668,6 +1678,10 @@ fun BottomSheetPlayer(
                                         .clip(RoundedCornerShape(playPauseRoundness))
                                         .background(textButtonColor)
                                         .clickable {
+                                            if (watchStream) {
+                                                WatchStreamPlayer.toggle()
+                                                return@clickable
+                                            }
                                             if (remotePlayback) {
                                                 scope.launch { LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "toggle") }
                                                 return@clickable
@@ -1727,7 +1741,7 @@ fun BottomSheetPlayer(
                                             .align(Alignment.Center)
                                             .alpha(if (isListenTogetherGuest) 0.5f else 1f),
                                     onClick = {
-                                        if (remotePlayback) {
+                                        if (remotePlayback || watchStream) {
                                             scope.launch { LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "next") }
                                         } else {
                                             playerConnection.seekToNext()

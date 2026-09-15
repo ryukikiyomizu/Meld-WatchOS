@@ -12,6 +12,7 @@ object PlaybackRemote {
     var playerConnection: PlayerConnection? = null
 
     data class State(
+        val id: String,
         val title: String,
         val artists: String,
         val artUrl: String?,
