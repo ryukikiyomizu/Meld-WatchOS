@@ -95,6 +95,7 @@ jobs:
         run: |
           mkdir -p out
           find app/build/outputs/apk/foss/debug -name "*.apk" | head -1 | xargs -I{} cp {} out/meld-watchos-preview.apk
+          cp out/meld-watchos-preview.apk out/meld-android-preview.apk
           ls -la out/
 
       - name: Upload APK to release
@@ -103,7 +104,7 @@ jobs:
         run: |
           TAG="watchos-preview"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" out/meld-watchos-preview.apk --clobber
+            gh release upload "$TAG" out/meld-watchos-preview.apk out/meld-android-preview.apk --clobber
             gh release edit "$TAG" \
               --notes "Preview APK built from branch \`$GITHUB_REF_NAME\` (unmerged work — PR #1).
           Commit: ${GITHUB_SHA:0:7}
@@ -122,5 +123,6 @@ jobs:
           Debug-signed build of the FOSS variant for testing on Wear OS watches.
           Install with: adb install meld-watchos-preview.apk" \
               out/meld-watchos-preview.apk
+              out/meld-android-preview.apk
           fi
           echo "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"

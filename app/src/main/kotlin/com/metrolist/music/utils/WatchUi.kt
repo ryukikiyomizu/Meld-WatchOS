@@ -136,7 +136,7 @@ fun rememberRoundScreenInsets(): RoundScreenInsets {
                 bottomBarHorizontal = bottomBarHorizontal,
                 playerHorizontal = w * 0.10f,
                 playerBottom = h * 0.10f,
-                playerTop = h * 0.05f,
+                playerTop = h * 0.08f,
             )
         } else {
             RoundScreenInsets(false, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp)
