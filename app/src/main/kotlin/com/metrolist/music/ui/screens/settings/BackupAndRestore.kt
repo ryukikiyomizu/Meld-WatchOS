@@ -555,12 +555,16 @@ fun BackupAndRestore(
                     onClick = {
                         if (payload != null) {
                             coroutineScope.launch {
-                                val sent =
+                                val result =
                                     LinkSender.send(context.applicationContext, LinkSender.PATH_SESSION, payload)
                                 Toast
                                     .makeText(
                                         context,
-                                        if (sent > 0) R.string.session_sent_to_watch else R.string.link_send_failed,
+                                        when {
+                                            result.delivered > 0 -> R.string.session_sent_to_watch
+                                            result.nodesFound == 0 -> R.string.link_no_node
+                                            else -> R.string.link_send_failed
+                                        },
                                         Toast.LENGTH_SHORT,
                                     ).show()
                             }

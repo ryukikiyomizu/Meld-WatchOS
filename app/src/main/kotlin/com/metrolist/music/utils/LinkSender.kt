@@ -22,30 +22,29 @@ object LinkSender {
     const val PATH_COPY_LINK = "/meld/copy-link"
     const val PATH_SESSION = "/meld/session"
 
-    /**
-     * @return number of connected nodes the link was delivered to
-     *         (0 when no paired device or Play services are unavailable).
-     */
-    suspend fun sendToPhone(
-        context: Context,
-        text: String,
-    ): Int = send(context, PATH_COPY_LINK, text)
+    /** Outcome of a wearable send: how many nodes run the app vs. deliveries. */
+    data class SendResult(
+        val nodesFound: Int,
+        val delivered: Int,
+    )
 
     /**
      * Sends [text] to every connected node over the Wearable message API
      * (Bluetooth-preferred transport between a paired watch and phone).
+     * The receiving device must have the same app installed (the
+     * WearableListenerServices are part of the app, not of Wear OS).
      */
     suspend fun send(
         context: Context,
         path: String,
         text: String,
-    ): Int =
+    ): SendResult =
         try {
             val availability =
                 GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
             if (availability != ConnectionResult.SUCCESS) {
                 Timber.d("LinkSender: Play services unavailable ($availability)")
-                return 0
+                return SendResult(0, 0)
             }
             val nodeClient = Wearable.getNodeClient(context)
             val nodes = Tasks.await(nodeClient.connectedNodes)
@@ -61,9 +60,9 @@ object LinkSender {
                     Timber.w(e, "LinkSender: failed to reach node ${node.displayName}")
                 }
             }
-            sent
+            SendResult(nodes.size, sent)
         } catch (e: Exception) {
             Timber.w(e, "LinkSender: send failed")
-            0
+            SendResult(0, 0)
         }
 }

@@ -410,16 +410,17 @@ fun PlayerMenu(
                             onClick = {
                                 onDismiss()
                                 coroutineScope.launch {
-                                    val sent =
-                                        LinkSender.sendToPhone(
+                                    val result =
+                                        LinkSender.send(
                                             context.applicationContext,
+                                            LinkSender.PATH_COPY_LINK,
                                             "https://music.youtube.com/watch?v=${mediaMetadata.id}",
                                         )
                                     val toastText =
-                                        if (sent > 0) {
-                                            context.getString(R.string.link_sent)
-                                        } else {
-                                            context.getString(R.string.link_send_failed)
+                                        when {
+                                            result.delivered > 0 -> context.getString(R.string.link_sent)
+                                            result.nodesFound == 0 -> context.getString(R.string.link_no_node)
+                                            else -> context.getString(R.string.link_send_failed)
                                         }
                                     android.widget.Toast
                                         .makeText(context, toastText, android.widget.Toast.LENGTH_SHORT)
