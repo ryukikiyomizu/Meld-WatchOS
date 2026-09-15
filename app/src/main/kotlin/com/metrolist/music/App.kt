@@ -78,11 +78,12 @@ class App :
     override fun onCreate() {
         super.onCreate()
 
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG && !resources.configuration.isScreenRound) {
             // Logs main-thread disk/network I/O and leaked resources to logcat so ANR
             // regressions are visible while developing. penaltyLog() only — never death,
             // to avoid crashing developers on pre-existing violations while we migrate
-            // away from blocking DataStore reads.
+            // away from blocking DataStore reads. Skipped on watches: the per-call
+            // logging itself costs frames on watch hardware.
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
                     .detectDiskReads()
@@ -335,6 +336,7 @@ class App :
             .apply {
                 components {
                     add(CrashSafeInterceptor)
+                    add(WatchImageCapInterceptor)
                 }
                 // Crossfade animates every image swap; on watch GPUs that costs frames
                 // while scrolling, so plain instant draws there.
@@ -361,6 +363,26 @@ class App :
                     networkCachePolicy(CachePolicy.ENABLED)
                 }
             }.build()
+    }
+
+    /**
+     * Watch perf: unsized image requests would decode full-res album art
+     * (1000px+) for 100px tiles. Cap the decode and halve pixel cost with
+     * RGB_565 on round displays.
+     */
+    private inner class WatchImageCapInterceptor : Interceptor {
+        override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
+            var request = chain.request
+            if (resources.configuration.isScreenRound) {
+                val builder = request.newBuilder()
+                if (request.size == coil3.size.Size.ORIGINAL) {
+                    builder.size(coil3.size.Size(320, 320))
+                }
+                builder.bitmapConfig(android.graphics.Bitmap.Config.RGB_565)
+                request = builder.build()
+            }
+            return chain.proceed(request)
+        }
     }
 
     private object CrashSafeInterceptor : Interceptor {

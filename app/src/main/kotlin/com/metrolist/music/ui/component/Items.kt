@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import com.metrolist.music.utils.listMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -469,7 +470,7 @@ fun SongGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee().fillMaxWidth()
+            modifier = listMarquee().fillMaxWidth()
         )
     },
     subtitle = {
@@ -689,7 +690,7 @@ fun AlbumGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee().fillMaxWidth()
+            modifier = listMarquee().fillMaxWidth()
         )
     },
     subtitle = {
@@ -860,7 +861,7 @@ fun PlaylistGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.basicMarquee().fillMaxWidth()
+            modifier = listMarquee().fillMaxWidth()
         )
     },
     subtitle = {
@@ -1095,7 +1096,7 @@ fun YouTubeGridItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = if (item is ArtistItem) TextAlign.Center else TextAlign.Start,
-            modifier = Modifier.basicMarquee().fillMaxWidth()
+            modifier = listMarquee().fillMaxWidth()
         )
     },
     subtitle = {

@@ -9,6 +9,9 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.util.DisplayMetrics
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.animation.animateItem
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
@@ -104,6 +107,23 @@ data class RoundScreenInsets(
 )
 
 @Composable
+/**
+ * Watch-friendly marquee: titles scroll a couple of times instead of
+ * animating forever, so scrolling lists don't pay per-frame invalidation.
+ */
+@Composable
+fun Modifier.listMarquee(): Modifier =
+    if (LocalConfiguration.current.isScreenRound) {
+        this.basicMarquee(iterations = 2)
+    } else {
+        this.basicMarquee()
+    }
+
+/** Item placement animations are costly on watch GPUs; skip them there. */
+@Composable
+fun Modifier.watchAnimateItem(): Modifier =
+    if (LocalConfiguration.current.isScreenRound) this else this.animateItem()
+
 fun rememberRoundScreenInsets(): RoundScreenInsets {
     val configuration = LocalConfiguration.current
     return remember(configuration) {

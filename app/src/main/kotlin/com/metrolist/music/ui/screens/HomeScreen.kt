@@ -174,6 +174,7 @@ import com.metrolist.music.ui.menu.YouTubePlaylistMenu
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.utils.SnapLayoutInfoProvider
 import com.metrolist.music.utils.rememberRoundScreenInsets
+import com.metrolist.music.utils.watchAnimateItem
 import com.metrolist.music.utils.isSpotifyId
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
@@ -1392,7 +1393,7 @@ fun HomeScreen(
                                                 }
                                             }
                                         },
-                                    modifier = Modifier.animateItem(),
+                                    modifier = Modifier.watchAnimateItem(),
                                 )
                             }
 
@@ -1482,7 +1483,7 @@ fun HomeScreen(
                                 item(key = "speed_dial_title") {
                                     NavigationTitle(
                                         title = stringResource(R.string.speed_dial),
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
 
@@ -1507,7 +1508,7 @@ fun HomeScreen(
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
-                                                .animateItem(),
+                                                .watchAnimateItem(),
                                     ) {
                                         HorizontalPager(
                                             state = pagerState,
@@ -1792,7 +1793,7 @@ fun HomeScreen(
                                     val quickPicksTitle = stringResource(R.string.quick_picks)
                                     NavigationTitle(
                                         title = quickPicksTitle,
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                         onPlayAllClick =
                                             if (!isListenTogetherGuest) {
                                                 {
@@ -1822,7 +1823,7 @@ fun HomeScreen(
                                             Modifier
                                                 .fillMaxWidth()
                                                 .height(ListItemHeight * 4)
-                                                .animateItem(),
+                                                .watchAnimateItem(),
                                     ) {
                                         items(
                                             items = quickPicks.distinctBy { it.id },
@@ -1897,7 +1898,7 @@ fun HomeScreen(
                                 item(key = "community_playlists_title") {
                                     NavigationTitle(
                                         title = stringResource(R.string.from_the_community),
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
 
@@ -1905,7 +1906,7 @@ fun HomeScreen(
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     ) {
                                         items(playlists) { item ->
                                             CommunityPlaylistCard(
@@ -2004,7 +2005,7 @@ fun HomeScreen(
                                 item(key = "keep_listening_title") {
                                     NavigationTitle(
                                         title = stringResource(R.string.keep_listening),
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
 
@@ -2030,7 +2031,7 @@ fun HomeScreen(
                                                                         .toDp() * 2
                                                             }
                                                     ) * rows,
-                                                ).animateItem(),
+                                                ).watchAnimateItem(),
                                     ) {
                                         items(keepListening) {
                                             localGridItem(it)
@@ -2077,7 +2078,7 @@ fun HomeScreen(
                                         onClick = {
                                             navController.navigate("account")
                                         },
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
 
@@ -2087,7 +2088,7 @@ fun HomeScreen(
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
                                                 .asPaddingValues(),
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     ) {
                                         items(
                                             items = accountPlaylists.distinctBy { it.id },
@@ -2106,7 +2107,7 @@ fun HomeScreen(
                                     val forgottenFavoritesTitle = stringResource(R.string.forgotten_favorites)
                                     NavigationTitle(
                                         title = forgottenFavoritesTitle,
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                         onPlayAllClick =
                                             if (!isListenTogetherGuest) {
                                                 {
@@ -2141,7 +2142,7 @@ fun HomeScreen(
                                             Modifier
                                                 .fillMaxWidth()
                                                 .height(ListItemHeight * rows)
-                                                .animateItem(),
+                                                .watchAnimateItem(),
                                     ) {
                                         items(
                                             items = forgottenFavorites.distinctBy { it.id },
@@ -2256,7 +2257,7 @@ fun HomeScreen(
                                                 is Playlist -> {}
                                             }
                                         },
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
 
@@ -2266,7 +2267,7 @@ fun HomeScreen(
                                             WindowInsets.systemBars
                                                 .only(WindowInsetsSides.Horizontal)
                                                 .asPaddingValues(),
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     ) {
                                         items(recommendation.items) { item ->
                                             ytGridItem(item)
@@ -2356,7 +2357,7 @@ fun HomeScreen(
                                             } else {
                                                 null
                                             },
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
 
@@ -2374,7 +2375,7 @@ fun HomeScreen(
                                                 Modifier
                                                     .fillMaxWidth()
                                                     .height(ListItemHeight * 4)
-                                                    .animateItem(),
+                                                    .watchAnimateItem(),
                                         ) {
                                             items(
                                                 items = sectionSongs.distinctBy { it.id },
@@ -2479,7 +2480,7 @@ fun HomeScreen(
                                                 WindowInsets.systemBars
                                                     .only(WindowInsetsSides.Horizontal)
                                                     .asPaddingValues(),
-                                            modifier = Modifier.animateItem(),
+                                            modifier = Modifier.watchAnimateItem(),
                                         ) {
                                             items(
                                                 items = sectionData.items.distinctBy { it.id },
@@ -2498,7 +2499,7 @@ fun HomeScreen(
                                     item(key = "recently_played_title") {
                                         NavigationTitle(
                                             title = recentTitle,
-                                            modifier = Modifier.animateItem(),
+                                            modifier = Modifier.watchAnimateItem(),
                                             onPlayAllClick = {
                                                 playerConnection.playQueue(
                                                     ListQueue(
@@ -2520,7 +2521,7 @@ fun HomeScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(ListItemHeight * rows)
-                                                .animateItem()
+                                                .watchAnimateItem()
                                         ) {
                                             items(
                                                 items = songs.distinctBy { it.id },
@@ -2599,7 +2600,7 @@ fun HomeScreen(
                                         onClick = {
                                             navController.navigate("mood_and_genres")
                                         },
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
                                 item(key = "mood_and_genres_list") {
@@ -2609,7 +2610,7 @@ fun HomeScreen(
                                         modifier =
                                             Modifier
                                                 .height((MoodAndGenresButtonHeight + 12.dp) * 4 + 12.dp)
-                                                .animateItem(),
+                                                .watchAnimateItem(),
                                     ) {
                                         items(moodAndGenres) {
                                             MoodAndGenresButton(
@@ -2641,7 +2642,7 @@ fun HomeScreen(
                                 onClick = if (section.title == "spotify_new_releases") {
                                     { navController.navigate("new_release") }
                                 } else null,
-                                modifier = Modifier.animateItem()
+                                modifier = Modifier.watchAnimateItem()
                             )
                         }
 
@@ -2664,7 +2665,7 @@ fun HomeScreen(
                                             )
                                         },
                                         onTrackLongClick = { },
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
                                 SectionType.ARTISTS -> {
@@ -2685,7 +2686,7 @@ fun HomeScreen(
                                                 }
                                             }
                                         },
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
                                 SectionType.ALBUMS -> {
@@ -2722,7 +2723,7 @@ fun HomeScreen(
                                                 }
                                             }
                                         },
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
                                 SectionType.PLAYLISTS -> {
@@ -2741,7 +2742,7 @@ fun HomeScreen(
                                                 )
                                             }
                                         },
-                                        modifier = Modifier.animateItem(),
+                                        modifier = Modifier.watchAnimateItem(),
                                     )
                                 }
                             }
@@ -2753,7 +2754,7 @@ fun HomeScreen(
                 if (isLoading && homePage?.sections.isNullOrEmpty()) {
                     item(key = "loading_shimmer") {
                         ShimmerHost(
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier.watchAnimateItem(),
                         ) {
                             repeat(2) {
                                 TextPlaceholder(
