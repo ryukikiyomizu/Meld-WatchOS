@@ -312,8 +312,8 @@ private fun NewMiniPlayer(
                 .fillMaxWidth()
                 .height(MiniPlayerHeight)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                .padding(horizontal = 12.dp + roundInsets.bottomBarHorizontal)
-                .padding(bottom = if (roundInsets.isRound) 8.dp else 0.dp)
+                .padding(horizontal = 12.dp + roundInsets.bottomBarHorizontal + if (roundInsets.isRound) 10.dp else 0.dp)
+                .padding(bottom = if (roundInsets.isRound) 16.dp else 0.dp)
                 .let { baseModifier ->
                     if (swipeThumbnail) {
                         baseModifier.pointerInput(Unit) {
@@ -381,11 +381,11 @@ private fun NewMiniPlayer(
             modifier =
                 Modifier
                     .then(if (isTabletLandscape) Modifier.width(500.dp).align(Alignment.Center) else Modifier.fillMaxWidth())
-                    .height(64.dp)
+                    .height(if (roundInsets.isRound) 56.dp else 64.dp)
                     .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
-                    .clip(RoundedCornerShape(32.dp))
+                    .clip(RoundedCornerShape(if (roundInsets.isRound) 28.dp else 32.dp))
                     .background(color = backgroundColor)
-                    .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp)),
+                    .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(if (roundInsets.isRound) 28.dp else 32.dp)),
         ) {
             when (miniPlayerBackground) {
                 MiniPlayerBackgroundStyle.BLUR -> {
