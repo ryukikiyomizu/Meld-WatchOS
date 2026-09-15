@@ -40,6 +40,8 @@ import com.metrolist.music.constants.MinimalModeKey
 import com.metrolist.music.utils.LinkSender
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
+import com.metrolist.music.utils.rememberPreference
+import androidx.compose.foundation.layout.size
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.ReleaseNotesCard
