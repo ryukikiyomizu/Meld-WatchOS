@@ -95,6 +95,9 @@ android {
             storeFile = workflowDebugKeystoreFile ?: persistentDebugKeystoreFile
             storePassword = debugKeystorePassword
             keyAlias = debugKeyAlias
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
             keyPassword = debugKeyPassword
         }
         create("release") {
