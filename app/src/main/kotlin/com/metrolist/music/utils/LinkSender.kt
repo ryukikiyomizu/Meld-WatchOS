@@ -20,6 +20,7 @@ import timber.log.Timber
  */
 object LinkSender {
     const val PATH_COPY_LINK = "/meld/copy-link"
+    const val PATH_SESSION = "/meld/session"
 
     /**
      * @return number of connected nodes the link was delivered to
@@ -27,6 +28,16 @@ object LinkSender {
      */
     suspend fun sendToPhone(
         context: Context,
+        text: String,
+    ): Int = send(context, PATH_COPY_LINK, text)
+
+    /**
+     * Sends [text] to every connected node over the Wearable message API
+     * (Bluetooth-preferred transport between a paired watch and phone).
+     */
+    suspend fun send(
+        context: Context,
+        path: String,
         text: String,
     ): Int =
         try {
@@ -43,7 +54,7 @@ object LinkSender {
             for (node in nodes) {
                 try {
                     Tasks.await(
-                        messageClient.sendMessage(node.id, PATH_COPY_LINK, text.toByteArray()),
+                        messageClient.sendMessage(node.id, path, text.toByteArray()),
                     )
                     sent++
                 } catch (e: Exception) {

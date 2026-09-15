@@ -80,6 +80,19 @@ data class MusicResponsiveListItemRenderer(
             return hasPodcastLink && hasVideoId
         }
 
+    /** Any playable video id for this row (playlist context or standalone). */
+    val videoId: String?
+        get() =
+            playlistItemData?.videoId
+                ?: navigationEndpoint?.watchEndpoint?.videoId
+                ?: overlay
+                    ?.musicItemThumbnailOverlayRenderer
+                    ?.content
+                    ?.musicPlayButtonRenderer
+                    ?.playNavigationEndpoint
+                    ?.watchEndpoint
+                    ?.videoId
+
     val musicVideoType: String?
         get() =
             overlay

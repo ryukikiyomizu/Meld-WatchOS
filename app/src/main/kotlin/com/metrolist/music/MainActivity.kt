@@ -491,10 +491,12 @@ class MainActivity : ComponentActivity() {
         val enableHighRefreshRate by rememberPreference(EnableHighRefreshRateKey, defaultValue = true)
 
         LaunchedEffect(enableHighRefreshRate) {
+            // Battery saver: high refresh rate buys nothing on watch displays.
+            val effectiveHighRefreshRate = if (roundInsets.isRound) false else enableHighRefreshRate
             val window = this@MainActivity.window
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val layoutParams = window.attributes
-                if (enableHighRefreshRate) {
+                if (effectiveHighRefreshRate) {
                     layoutParams.preferredDisplayModeId = 0
                 } else {
                     val modes = window.windowManager.defaultDisplay.supportedModes
@@ -509,7 +511,7 @@ class MainActivity : ComponentActivity() {
                 window.attributes = layoutParams
             } else {
                 val params = window.attributes
-                if (enableHighRefreshRate) {
+                if (effectiveHighRefreshRate) {
                     params.preferredRefreshRate = 0f
                 } else {
                     params.preferredRefreshRate = 60f

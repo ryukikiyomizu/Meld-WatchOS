@@ -1131,6 +1131,8 @@
     <string name="dp_action_previous">Previous</string>
     <string name="dp_action_like">Like</string>
     <string name="dp_action_off">Off</string>
+    <string name="session_send_to_watch">Send to watch</string>
+    <string name="session_sent_to_watch">Session sent to watch</string>
 
     <!-- Accessibility -->
     <string name="back">Back</string>

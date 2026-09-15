@@ -45,7 +45,10 @@ private const val DENSITY_SCALE_KEY = "density_scale_factor"
  * layouts, dialogs, popups and menus alike.
  */
 fun Context.withWatchUiScale(): Context {
-    val scale = WATCH_UI_SCALE * storedDensityScale()
+    val isRound =
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
+            resources.configuration.isScreenRound
+    val scale = (if (isRound) WATCH_UI_SCALE else 1f) * storedDensityScale()
     if (scale == 1f) return this
 
     val configuration = Configuration(resources.configuration)

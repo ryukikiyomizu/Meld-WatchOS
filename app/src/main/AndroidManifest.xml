@@ -380,6 +380,18 @@
                     android:scheme="wear" />
             </intent-filter>
         </service>
+        <service
+            android:name=".playback.SessionReceiverService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/meld/session"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

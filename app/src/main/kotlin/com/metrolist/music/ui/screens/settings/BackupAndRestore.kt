@@ -66,6 +66,7 @@ import com.metrolist.music.ui.menu.CsvColumnMappingDialog
 import com.metrolist.music.ui.menu.CsvImportProgressDialog
 import com.metrolist.music.ui.menu.LoadingScreen
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.LinkSender
 import com.metrolist.music.utils.SessionTransfer
 import com.metrolist.music.viewmodels.BackupPreviewInfo
 import com.metrolist.music.viewmodels.BackupRestoreViewModel
@@ -550,6 +551,25 @@ fun BackupAndRestore(
             },
             title = { Text(stringResource(R.string.export_session)) },
             buttons = {
+                TextButton(
+                    onClick = {
+                        if (payload != null) {
+                            coroutineScope.launch {
+                                val sent =
+                                    LinkSender.send(context.applicationContext, LinkSender.PATH_SESSION, payload)
+                                Toast
+                                    .makeText(
+                                        context,
+                                        if (sent > 0) R.string.session_sent_to_watch else R.string.link_send_failed,
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                            }
+                        }
+                        showSessionExportDialog = false
+                    },
+                ) {
+                    Text(stringResource(R.string.session_send_to_watch))
+                }
                 TextButton(
                     onClick = {
                         if (payload != null) {
