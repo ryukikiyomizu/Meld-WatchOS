@@ -79,21 +79,15 @@ fun BottomSheetPage(
             exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 3 }),
         ) {
             BackHandler { state.isVisible = false }
-            androidx.wear.compose.material3.ScreenScaffold(
+            Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(background),
+                        .background(background)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 24.dp),
             ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 24.dp),
-                ) {
-                    state.content(this)
-                }
+                state.content(this)
             }
         }
         return
