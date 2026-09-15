@@ -92,6 +92,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.ui.input.pointer.pointerInput
@@ -197,13 +199,13 @@ private fun Modifier.doublePinchGesture(
     } else {
         this.pointerInput(onDoublePinch) {
             var lastPinchAt = 0L
-            val pointers = mutableMapOf<androidx.compose.ui.input.pointer.PointerId, androidx.compose.ui.geometry.Offset>()
+            val pointers = mutableMapOf<PointerId, Offset>()
             var maxDist = 0f
             var minDist = Float.MAX_VALUE
-            androidx.compose.ui.input.pointer.awaitPointerEventScope {
+            awaitPointerEventScope {
                 while (true) {
                     // Initial pass: children (buttons, swipes) cannot starve the detector.
-                    val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
                     for (change in event.changes) {
                         if (change.pressed) pointers[change.id] = change.position else pointers.remove(change.id)
                     }
@@ -1025,7 +1027,7 @@ fun BottomSheetPlayer(
                                     modifier =
                                         Modifier
                                             .pointerInput(Unit) {
-                                                androidx.compose.ui.input.pointer.awaitPointerEventScope {
+                                                awaitPointerEventScope {
                                                     while (true) {
                                                         val event = awaitPointerEvent()
                                                         val tapPosition = event.changes.firstOrNull()?.position
