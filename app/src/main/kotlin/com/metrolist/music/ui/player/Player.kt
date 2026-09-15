@@ -31,12 +31,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.getDistance
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerId
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -201,19 +195,19 @@ private fun Modifier.doublePinchGesture(
     } else {
         this.pointerInput(onDoublePinch) {
             var lastPinchAt = 0L
-            val pointers = mutableMapOf<PointerId, Offset>()
+            val pointers = mutableMapOf<androidx.compose.ui.input.pointer.PointerId, androidx.compose.ui.geometry.Offset>()
             var maxDist = 0f
             var minDist = Float.MAX_VALUE
-            awaitPointerEventScope {
+            androidx.compose.ui.input.pointer.awaitPointerEventScope {
                 while (true) {
                     // Initial pass: children (buttons, swipes) cannot starve the detector.
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                     for (change in event.changes) {
                         if (change.pressed) pointers[change.id] = change.position else pointers.remove(change.id)
                     }
                     if (pointers.size == 2) {
                         val v = pointers.values.toList()
-                        val d = (v[0] - v[1]).getDistance()
+                        val d = kotlin.math.hypot(v[0].x - v[1].x, v[0].y - v[1].y)
                         maxDist = maxOf(maxDist, d)
                         minDist = minOf(minDist, d)
                     } else if (pointers.size < 2) {
@@ -1029,7 +1023,7 @@ fun BottomSheetPlayer(
                                     modifier =
                                         Modifier
                                             .pointerInput(Unit) {
-                                                awaitPointerEventScope {
+                                                androidx.compose.ui.input.pointer.awaitPointerEventScope {
                                                     while (true) {
                                                         val event = awaitPointerEvent()
                                                         val tapPosition = event.changes.firstOrNull()?.position

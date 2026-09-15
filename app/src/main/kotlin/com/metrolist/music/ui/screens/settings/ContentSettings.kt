@@ -33,6 +33,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -83,6 +84,7 @@ import com.metrolist.music.constants.ShowWrappedCardKey
 import com.metrolist.music.constants.TopSize
 import com.metrolist.music.ui.component.EnumDialog
 import com.metrolist.music.ui.component.IconButton
+import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.DraggableLyricsProviderItem
