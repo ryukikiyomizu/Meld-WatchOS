@@ -105,7 +105,6 @@ data class RoundScreenInsets(
     val playerTop: Dp,
 )
 
-@Composable
 /**
  * Watch-friendly marquee: titles scroll a couple of times instead of
  * animating forever, so scrolling lists don't pay per-frame invalidation.

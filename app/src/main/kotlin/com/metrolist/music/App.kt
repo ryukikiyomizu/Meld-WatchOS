@@ -336,7 +336,6 @@ class App :
             .apply {
                 components {
                     add(CrashSafeInterceptor)
-                    add(WatchImageCapInterceptor)
                 }
                 // Crossfade animates every image swap; on watch GPUs that costs frames
                 // while scrolling, so plain instant draws there.
@@ -363,25 +362,6 @@ class App :
                     networkCachePolicy(CachePolicy.ENABLED)
                 }
             }.build()
-    }
-
-    /**
-     * Watch perf: unsized image requests would decode full-res album art
-     * (1000px+) for 100px tiles. Cap the decode and halve pixel cost with
-     * RGB_565 on round displays.
-     */
-    private inner class WatchImageCapInterceptor : Interceptor {
-        override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
-            var request = chain.request
-            if (resources.configuration.isScreenRound) {
-                val builder = request.newBuilder()
-                if (request.size == coil3.size.Size.ORIGINAL) {
-                    builder.size(coil3.size.Size(320, 320))
-                }
-                request = builder.build()
-            }
-            return chain.with(request).proceed()
-        }
     }
 
     private object CrashSafeInterceptor : Interceptor {
