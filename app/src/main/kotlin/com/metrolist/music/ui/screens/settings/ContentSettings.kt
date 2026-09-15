@@ -90,6 +90,14 @@ import com.metrolist.music.ui.component.DraggableLyricsProviderList
 import com.metrolist.music.lyrics.LyricsProviderRegistry
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberEnumPreference
+import androidx.compose.runtime.collectAsState
+import androidx.datastore.preferences.core.emptyPreferences
+import com.metrolist.music.constants.AutoSyncPolicyKey
+import com.metrolist.music.constants.OffloadToPhoneKey
+import com.metrolist.music.constants.WearBatterySaverKey
+import com.metrolist.music.constants.LastFullSyncKey
+import com.metrolist.music.constants.SyncSkipCountKey
+import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.rememberPreference
 import java.net.Proxy
 
@@ -101,6 +109,11 @@ fun ContentSettings(
     val context = LocalContext.current
     // Used only before Android 13
     val (appLanguage, onAppLanguageChange) = rememberPreference(key = AppLanguageKey, defaultValue = SYSTEM_DEFAULT)
+    val (wearSaver, onWearSaverChange) = rememberPreference(WearBatterySaverKey, false)
+    val (autoSyncPolicy, onAutoSyncPolicyChange) = rememberPreference(AutoSyncPolicyKey, "always")
+    val (offloadToPhone, onOffloadToPhoneChange) = rememberPreference(OffloadToPhoneKey, false)
+    val dsPrefs by context.dataStore.data.collectAsState(initial = emptyPreferences())
+    var showSyncPolicyDialog by remember { mutableStateOf(false) }
 
     val (contentLanguage, onContentLanguageChange) = rememberPreference(key = ContentLanguageKey, defaultValue = "system")
     val (contentCountry, onContentCountryChange) = rememberPreference(key = ContentCountryKey, defaultValue = "system")
@@ -654,6 +667,115 @@ fun ContentSettings(
                 )
             )
         )
+        Spacer(modifier = Modifier.height(27.dp))
+
+        if (showSyncPolicyDialog) {
+            DefaultDialog(
+                onDismiss = { showSyncPolicyDialog = false },
+                title = { Text(stringResource(R.string.auto_sync_policy)) },
+                buttons = {
+                    Column(horizontalAlignment = Alignment.Start) {
+                        listOf(
+                            "always" to stringResource(R.string.sync_policy_always),
+                            "charging" to stringResource(R.string.sync_policy_charging),
+                            "wifi" to stringResource(R.string.sync_policy_wifi),
+                            "off" to stringResource(R.string.sync_policy_off),
+                        ).forEach { (value, label) ->
+                            TextButton(
+                                onClick = {
+                                    onAutoSyncPolicyChange(value)
+                                    showSyncPolicyDialog = false
+                                },
+                            ) {
+                                Text(
+                                    text = if (value == autoSyncPolicy) "• $label" else label,
+                                    fontWeight = if (value == autoSyncPolicy) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            }
+                        }
+                    }
+                },
+            )
+        }
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.wear_battery_sync),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.battery),
+                    title = { Text(stringResource(R.string.wear_battery_saver)) },
+                    description = { Text(stringResource(R.string.wear_battery_saver_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = wearSaver,
+                            onCheckedChange = onWearSaverChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (wearSaver) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onWearSaverChange(!wearSaver) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.sync),
+                    title = { Text(stringResource(R.string.auto_sync_policy)) },
+                    description = {
+                        Text(
+                            when (autoSyncPolicy) {
+                                "charging" -> stringResource(R.string.sync_policy_charging)
+                                "wifi" -> stringResource(R.string.sync_policy_wifi)
+                                "off" -> stringResource(R.string.sync_policy_off)
+                                else -> stringResource(R.string.sync_policy_always)
+                            }
+                        )
+                    },
+                    onClick = { showSyncPolicyDialog = true }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.phone),
+                    title = { Text(stringResource(R.string.offload_to_phone)) },
+                    description = { Text(stringResource(R.string.offload_to_phone_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = offloadToPhone,
+                            onCheckedChange = onOffloadToPhoneChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (offloadToPhone) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onOffloadToPhoneChange(!offloadToPhone) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.stats),
+                    title = { Text(stringResource(R.string.sync_stats_title)) },
+                    description = {
+                        val last = dsPrefs[LastFullSyncKey] ?: 0L
+                        val skips = dsPrefs[SyncSkipCountKey] ?: 0
+                        Text(
+                            stringResource(
+                                R.string.sync_stats,
+                                if (last > 0) java.time.Instant.ofEpochSecond(last).toString().take(16).replace("T", " ") else "—",
+                                skips
+                            )
+                        )
+                    },
+                ),
+            )
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 

@@ -6,6 +6,15 @@
 package com.metrolist.music.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -59,6 +68,36 @@ fun BottomSheetPage(
     background: Color = MaterialTheme.colorScheme.surfaceColorAtElevation(NavigationBarDefaults.Elevation),
 ) {
     val focusManager = LocalFocusManager.current
+    val isRound = LocalContext.current.resources.configuration.isScreenRound
+
+    if (isRound) {
+        // Wear-native: full-screen circular-flow page instead of a phone bottom sheet.
+        AnimatedVisibility(
+            visible = state.isVisible,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 3 }),
+        ) {
+            BackHandler { state.isVisible = false }
+            androidx.wear.compose.material3.ScreenScaffold(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(background),
+            ) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(bottom = 24.dp),
+                ) {
+                    state.content(this)
+                }
+            }
+        }
+        return
+    }
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
     AnimatedBottomSheet(

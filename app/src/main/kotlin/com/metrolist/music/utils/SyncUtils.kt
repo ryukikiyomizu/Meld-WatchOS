@@ -19,7 +19,11 @@ import com.metrolist.innertube.utils.parseCookieString
 import com.metrolist.lastfm.LastFM
 import com.metrolist.music.constants.InnerTubeCookieKey
 import com.metrolist.music.constants.LastFMUseSendLikes
+import com.metrolist.music.constants.AutoSyncPolicyKey
 import com.metrolist.music.constants.LastFullSyncKey
+import com.metrolist.music.constants.OffloadToPhoneKey
+import com.metrolist.music.constants.SyncSkipCountKey
+import com.metrolist.music.constants.WearBatterySaverKey
 import com.metrolist.music.constants.SYNC_COOLDOWN
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.ArtistEntity
@@ -29,7 +33,9 @@ import com.metrolist.music.db.entities.PodcastEntity
 import com.metrolist.music.db.entities.SetVideoIdEntity
 import com.metrolist.music.db.entities.SongEntity
 import com.metrolist.music.extensions.collectLatest
+import com.metrolist.music.extensions.isCharging
 import com.metrolist.music.extensions.isInternetConnected
+import com.metrolist.music.extensions.isOnWifi
 import com.metrolist.music.extensions.isSyncEnabled
 import com.metrolist.music.models.toMediaMetadata
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -277,6 +283,27 @@ class SyncUtils @Inject constructor(
                 return@launch
             }
 
+            // Wear battery & network-aware auto-sync policy.
+            val saver = context.dataStore.get(WearBatterySaverKey, false)
+            if (saver) {
+                Timber.d("Auto sync skipped: wearable battery saver is on")
+                bumpSyncSkips()
+                return@launch
+            }
+            when (context.dataStore.get(AutoSyncPolicyKey, "always")) {
+                "off" -> { bumpSyncSkips(); return@launch }
+                "charging" -> if (!context.isCharging()) { bumpSyncSkips(); return@launch }
+                "wifi" -> if (!context.isOnWifi()) { bumpSyncSkips(); return@launch }
+            }
+            // Phone offload: while the paired phone runs Meld, let it own syncing.
+            if (context.dataStore.get(OffloadToPhoneKey, false) &&
+                LinkSender.hasConnectedNodeQuick(context)
+            ) {
+                Timber.d("Auto sync offloaded to paired phone")
+                bumpSyncSkips()
+                return@launch
+            }
+
             val lastSync = context.dataStore.get(LastFullSyncKey, 0L)
             val currentTime = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
             if (lastSync > 0 && (currentTime - lastSync) < SYNC_COOLDOWN) {
@@ -289,6 +316,10 @@ class SyncUtils @Inject constructor(
                 settings[LastFullSyncKey] = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
             }
         }
+    }
+
+    private suspend fun bumpSyncSkips() {
+        context.dataStore.edit { it[SyncSkipCountKey] = (it[SyncSkipCountKey] ?: 0) + 1 }
     }
 
     fun runAllSyncs() {

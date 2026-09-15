@@ -12,6 +12,7 @@ import com.google.android.gms.wearable.Node
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -25,6 +26,21 @@ import timber.log.Timber
 object LinkSender {
     const val PATH_COPY_LINK = "/meld/copy-link"
     const val PATH_SESSION = "/meld/session"
+
+    /** Fast peer-node probe (no retry loop) used for offload decisions. */
+    suspend fun hasConnectedNodeQuick(context: Context): Boolean =
+        try {
+            if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) !=
+                ConnectionResult.SUCCESS
+            ) {
+                return false
+            }
+            withTimeoutOrNull(1500) {
+                Tasks.await(Wearable.getNodeClient(context).connectedNodes)
+            }?.isNotEmpty() == true
+        } catch (e: Exception) {
+            false
+        }
 
     /** Outcome of a wearable send: how many nodes run the app vs. deliveries. */
     data class SendResult(

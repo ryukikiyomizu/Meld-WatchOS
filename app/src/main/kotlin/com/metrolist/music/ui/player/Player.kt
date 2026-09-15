@@ -31,6 +31,12 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.getDistance
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -172,6 +178,7 @@ import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.constants.DoublePinchActionKey
+import com.metrolist.music.constants.WearBatterySaverKey
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.rememberRoundScreenInsets
 import kotlinx.coroutines.Dispatchers
@@ -194,20 +201,33 @@ private fun Modifier.doublePinchGesture(
     } else {
         this.pointerInput(onDoublePinch) {
             var lastPinchAt = 0L
-            while (true) {
-                var totalZoom = 1f
-                var moved = false
-                detectTransformGestures { _, _, zoom, _ ->
-                    totalZoom *= zoom
-                    moved = true
-                }
-                if (moved && (totalZoom < 0.75f || totalZoom > 1.35f)) {
-                    val now = System.currentTimeMillis()
-                    if (now - lastPinchAt < 900L) {
-                        lastPinchAt = 0L
-                        onDoublePinch()
-                    } else {
-                        lastPinchAt = now
+            val pointers = mutableMapOf<PointerId, Offset>()
+            var maxDist = 0f
+            var minDist = Float.MAX_VALUE
+            awaitPointerEventScope {
+                while (true) {
+                    // Initial pass: children (buttons, swipes) cannot starve the detector.
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    for (change in event.changes) {
+                        if (change.pressed) pointers[change.id] = change.position else pointers.remove(change.id)
+                    }
+                    if (pointers.size == 2) {
+                        val v = pointers.values.toList()
+                        val d = (v[0] - v[1]).getDistance()
+                        maxDist = maxOf(maxDist, d)
+                        minDist = minOf(minDist, d)
+                    } else if (pointers.size < 2) {
+                        if (maxDist > 40f && minDist < maxDist * 0.7f) {
+                            val now = System.currentTimeMillis()
+                            if (now - lastPinchAt < 900L) {
+                                lastPinchAt = 0L
+                                onDoublePinch()
+                            } else {
+                                lastPinchAt = now
+                            }
+                        }
+                        maxDist = 0f
+                        minDist = Float.MAX_VALUE
                     }
                 }
             }
@@ -244,6 +264,7 @@ fun BottomSheetPlayer(
     // Round Wear OS displays: native-ratio insets (marquee etc.) while the
     // album-art background and controls stay full-bleed.
     val roundInsets = rememberRoundScreenInsets()
+    val (wearSaver) = rememberPreference(WearBatterySaverKey, false)
 
     // Wear OS build: the player always shows the album art as its background
     // (the BLUR style drives the image-background color scheme; the rendering
@@ -948,7 +969,7 @@ fun BottomSheetPlayer(
                             color = TextBackgroundColor,
                             modifier =
                                 Modifier
-                                    .basicMarquee(iterations = if (roundInsets.isRound) Int.MAX_VALUE else 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                    .basicMarquee(iterations = if (roundInsets.isRound && !wearSaver) Int.MAX_VALUE else 1, initialDelayMillis = 3000, velocity = 30.dp)
                                     .combinedClickable(
                                         enabled = true,
                                         indication = null,
@@ -994,7 +1015,7 @@ fun BottomSheetPlayer(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .basicMarquee(iterations = if (roundInsets.isRound) Int.MAX_VALUE else 1, initialDelayMillis = 3000, velocity = 30.dp)
+                                        .basicMarquee(iterations = if (roundInsets.isRound && !wearSaver) Int.MAX_VALUE else 1, initialDelayMillis = 3000, velocity = 30.dp)
                                         .padding(end = 12.dp),
                             ) {
                                 var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
