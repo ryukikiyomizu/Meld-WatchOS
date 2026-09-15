@@ -1,30 +1,27 @@
 package com.metrolist.music.ui.widget
 
-import androidx.wear.protolayout.ActionBuilders
-import androidx.wear.protolayout.ColorBuilders
-import androidx.wear.protolayout.DeviceParametersBuilders.DeviceParameters
-import androidx.wear.protolayout.DimensionBuilders.dp
-import androidx.wear.protolayout.DimensionBuilders.expand
-import androidx.wear.protolayout.DimensionBuilders.sp
-import androidx.wear.protolayout.LayoutElementBuilders
-import androidx.wear.protolayout.ModifiersBuilders
-import androidx.wear.protolayout.TimelineBuilders.Timeline
-import androidx.wear.protolayout.TimelineBuilders.TimelineEntry
-import androidx.wear.protolayout.HorizontalAlignment
+import androidx.wear.tiles.ActionBuilders
+import androidx.wear.tiles.ColorBuilders
+import androidx.wear.tiles.DimensionBuilders.dp
+import androidx.wear.tiles.DimensionBuilders.expand
+import androidx.wear.tiles.DimensionBuilders.sp
+import androidx.wear.tiles.EdgeBuilders
+import androidx.wear.tiles.LayoutElementBuilders
+import androidx.wear.tiles.ModifiersBuilders
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.ResourceBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
+import androidx.wear.tiles.TimelineBuilders
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import kotlinx.coroutines.runBlocking
 import com.metrolist.music.MainActivity
 import com.metrolist.music.R
 import com.metrolist.music.constants.AudioOutputKey
 import com.metrolist.music.constants.MinimalModeKey
 import com.metrolist.music.playback.PlaybackRemote
 import com.metrolist.music.utils.dataStore
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 /**
  * Wear OS tile: a glanceable mini-player.
@@ -53,7 +50,7 @@ class PlayerTileService : TileService() {
                 .build(),
         )
 
-    private fun buildTimeline(): Timeline {
+    private fun buildTimeline(): TimelineBuilders.Timeline {
         val prefs = runBlocking { dataStore.data.first() }
         val minimal = prefs[MinimalModeKey] ?: false
         val output = prefs[AudioOutputKey] ?: "watch"
@@ -97,7 +94,7 @@ class PlayerTileService : TileService() {
                                 .setClassName(MainActivity::class.java.name)
                                 .addKeyToExtraMapping(
                                     "from_tile",
-                                    ActionBuilders.AndroidBooleanExtra.Builder().setValue(true).build(),
+                                    ActionBuilders.BoolExtra.Builder().setValue(true).build(),
                                 ).build(),
                         ).build(),
                 ).build()
@@ -106,16 +103,13 @@ class PlayerTileService : TileService() {
             LayoutElementBuilders.Column
                 .Builder()
                 .setWidth(expand())
-                .setHorizontalAlignment(HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER)
-                .addContent(
-                    text(title, 15f, 0xFFFFFFFF.toInt(), bold = true, maxLines = 1),
-                ).addContent(spacer(4f))
-                .addContent(
-                    text(subtitle, 12f, 0xFFB0B0B0.toInt(), maxLines = 1),
-                ).addContent(spacer(10f))
-                .addContent(
-                    text(status, 11f, 0xFF8AB4F8.toInt(), maxLines = 1),
-                ).build()
+                .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGNMENT_CENTER)
+                .addContent(text(title, 15f, 0xFFFFFFFF.toInt(), bold = true, maxLines = 1))
+                .addContent(spacer(4f))
+                .addContent(text(subtitle, 12f, 0xFFB0B0B0.toInt(), maxLines = 1))
+                .addContent(spacer(10f))
+                .addContent(text(status, 11f, 0xFF8AB4F8.toInt(), maxLines = 1))
+                .build()
 
         val box =
             LayoutElementBuilders.Box
@@ -126,14 +120,19 @@ class PlayerTileService : TileService() {
                     ModifiersBuilders.Modifiers
                         .Builder()
                         .setClickable(clickable)
-                        .build(),
+                        .setPadding(
+                            EdgeBuilders.Padding
+                                .Builder()
+                                .setAll(dp(16f))
+                                .build(),
+                        ).build(),
                 ).addContent(column)
                 .build()
 
-        return Timeline
+        return TimelineBuilders.Timeline
             .Builder()
             .addTimelineEntry(
-                TimelineEntry
+                TimelineBuilders.TimelineEntry
                     .Builder()
                     .setLayout(
                         LayoutElementBuilders.Layout
@@ -153,7 +152,7 @@ class PlayerTileService : TileService() {
     ) = LayoutElementBuilders.Text
         .Builder()
         .setText(value)
-        .setMultilineAlignment(HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER)
+        .setMultilineAlignment(LayoutElementBuilders.HORIZONTAL_ALIGNMENT_CENTER)
         .setMaxLines(maxLines)
         .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE_END)
         .setFontStyle(
