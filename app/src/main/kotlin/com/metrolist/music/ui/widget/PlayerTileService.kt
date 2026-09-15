@@ -13,7 +13,10 @@ import androidx.wear.protolayout.TimelineBuilders.Timeline
 import androidx.wear.protolayout.TimelineBuilders.TimelineEntry
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.ResourceBuilders
-import androidx.wear.tiles.SuspendingTileService
+import androidx.wear.tiles.TileService
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.runBlocking
 import com.metrolist.music.MainActivity
 import com.metrolist.music.R
 import com.metrolist.music.constants.AudioOutputKey
@@ -31,9 +34,20 @@ import kotlinx.coroutines.flow.first
  * Tapping always launches MainActivity; the connection/offline guard and the
  * "connect to phone or turn off minimal mode" toast live there.
  */
-class PlayerTileService : SuspendingTileService() {
-    override suspend fun onTileRequest(requestParams: RequestBuilders.TileRequest): Timeline {
-        val prefs = dataStore.data.first()
+class PlayerTileService : TileService() {
+    override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<Timeline> =
+        Futures.immediateFuture(buildTimeline())
+
+    override fun onTileResourcesRequest(requestParams: ResourceBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> =
+        Futures.immediateFuture(
+            ResourceBuilders.Resources
+                .Builder()
+                .setVersion("1")
+                .build(),
+        )
+
+    private fun buildTimeline(): Timeline {
+        val prefs = runBlocking { dataStore.data.first() }
         val minimal = prefs[MinimalModeKey] ?: false
         val output = prefs[AudioOutputKey] ?: "watch"
         val remote = PlaybackRemote.remoteState.value
@@ -127,12 +141,6 @@ class PlayerTileService : SuspendingTileService() {
                     ).build(),
             ).build()
     }
-
-    override suspend fun onTileResourcesRequest(requestParams: ResourceBuilders.ResourcesRequest): ResourceBuilders.Resources =
-        ResourceBuilders.Resources
-            .Builder()
-            .setVersion("1")
-            .build()
 
     private fun text(
         value: String,
