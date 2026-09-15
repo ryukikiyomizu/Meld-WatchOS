@@ -489,10 +489,11 @@ class MainActivity : ComponentActivity() {
 
         val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
         val enableHighRefreshRate by rememberPreference(EnableHighRefreshRateKey, defaultValue = true)
+        val refreshRateRoundInsets = rememberRoundScreenInsets()
 
         LaunchedEffect(enableHighRefreshRate) {
             // Battery saver: high refresh rate buys nothing on watch displays.
-            val effectiveHighRefreshRate = if (roundInsets.isRound) false else enableHighRefreshRate
+            val effectiveHighRefreshRate = if (refreshRateRoundInsets.isRound) false else enableHighRefreshRate
             val window = this@MainActivity.window
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val layoutParams = window.attributes
