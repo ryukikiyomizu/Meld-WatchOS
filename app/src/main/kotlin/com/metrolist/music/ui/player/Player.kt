@@ -195,13 +195,13 @@ private fun Modifier.doublePinchGesture(
     } else {
         this.pointerInput(onDoublePinch) {
             var lastPinchAt = 0L
-            val pointers = mutableMapOf<PointerId, Offset>()
+            val pointers = mutableMapOf<androidx.compose.ui.input.pointer.PointerId, Offset>()
             var maxDist = 0f
             var minDist = Float.MAX_VALUE
             awaitPointerEventScope {
                 while (true) {
                     // Initial pass: children (buttons, swipes) cannot starve the detector.
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                     for (change in event.changes) {
                         if (change.pressed) pointers[change.id] = change.position else pointers.remove(change.id)
                     }
