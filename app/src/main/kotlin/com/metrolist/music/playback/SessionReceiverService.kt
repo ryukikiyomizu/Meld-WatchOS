@@ -28,6 +28,10 @@ class SessionReceiverService : WearableListenerService() {
             return
         }
         Timber.d("SessionReceiverService: applying session from ${event.sourceNodeId}")
-        runBlocking { SessionTransfer.apply(applicationContext, parsed) }
+        try {
+            runBlocking { SessionTransfer.apply(applicationContext, parsed) }
+        } catch (e: Exception) {
+            Timber.e(e, "SessionReceiverService: failed to apply pushed session")
+        }
     }
 }
