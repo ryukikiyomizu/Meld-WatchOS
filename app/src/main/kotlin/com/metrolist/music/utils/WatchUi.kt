@@ -122,6 +122,7 @@ fun Modifier.listMarquee(): Modifier =
 fun Modifier.watchAnimateItem(): Modifier =
     if (LocalConfiguration.current.isScreenRound) this else this.animateItem()
 
+@Composable
 fun rememberRoundScreenInsets(): RoundScreenInsets {
     val configuration = LocalConfiguration.current
     return remember(configuration) {
