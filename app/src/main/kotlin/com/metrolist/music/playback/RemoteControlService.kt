@@ -3,6 +3,7 @@ package com.metrolist.music.playback
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.metrolist.music.constants.MinimalModeKey
+import com.metrolist.music.extensions.togglePlayPause
 import com.metrolist.music.utils.LinkSender
 import com.metrolist.music.utils.dataStore
 import kotlinx.coroutines.runBlocking
