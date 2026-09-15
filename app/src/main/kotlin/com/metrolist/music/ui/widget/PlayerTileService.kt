@@ -1,18 +1,16 @@
 package com.metrolist.music.ui.widget
 
-import androidx.wear.tiles.ActionBuilders
-import androidx.wear.tiles.ColorBuilders
-import androidx.wear.tiles.DimensionBuilders.dp
-import androidx.wear.tiles.DimensionBuilders.expand
-import androidx.wear.tiles.DimensionBuilders.sp
-import androidx.wear.tiles.EdgeBuilders
-import androidx.wear.tiles.LayoutElementBuilders
-import androidx.wear.tiles.ModifiersBuilders
+import androidx.wear.protolayout.ActionBuilders
+import androidx.wear.protolayout.ColorBuilders
+import androidx.wear.protolayout.DimensionBuilders.dp
+import androidx.wear.protolayout.DimensionBuilders.expand
+import androidx.wear.protolayout.DimensionBuilders.sp
+import androidx.wear.protolayout.LayoutElementBuilders
+import androidx.wear.protolayout.ModifiersBuilders
+import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.tiles.RequestBuilders
-import androidx.wear.tiles.ResourceBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
-import androidx.wear.tiles.TimelineBuilders
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.metrolist.music.MainActivity
@@ -21,6 +19,7 @@ import com.metrolist.music.constants.AudioOutputKey
 import com.metrolist.music.constants.MinimalModeKey
 import com.metrolist.music.playback.PlaybackRemote
 import com.metrolist.music.utils.dataStore
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -37,14 +36,14 @@ class PlayerTileService : TileService() {
         Futures.immediateFuture(
             TileBuilders.Tile
                 .Builder()
-                .setTimeline(buildTimeline())
+                .setTileTimeline(buildTimeline())
                 .setResourcesVersion("1")
                 .build(),
         )
 
-    override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> =
+    override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest): ListenableFuture<androidx.wear.protolayout.ResourceBuilders.Resources> =
         Futures.immediateFuture(
-            ResourceBuilders.Resources
+            androidx.wear.protolayout.ResourceBuilders.Resources
                 .Builder()
                 .setVersion("1")
                 .build(),
@@ -94,7 +93,7 @@ class PlayerTileService : TileService() {
                                 .setClassName(MainActivity::class.java.name)
                                 .addKeyToExtraMapping(
                                     "from_tile",
-                                    ActionBuilders.BoolExtra.Builder().setValue(true).build(),
+                                    ActionBuilders.AndroidBooleanExtra.Builder().setValue(true).build(),
                                 ).build(),
                         ).build(),
                 ).build()
@@ -103,7 +102,7 @@ class PlayerTileService : TileService() {
             LayoutElementBuilders.Column
                 .Builder()
                 .setWidth(expand())
-                .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGNMENT_CENTER)
+                .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
                 .addContent(text(title, 15f, 0xFFFFFFFF.toInt(), bold = true, maxLines = 1))
                 .addContent(spacer(4f))
                 .addContent(text(subtitle, 12f, 0xFFB0B0B0.toInt(), maxLines = 1))
@@ -120,12 +119,7 @@ class PlayerTileService : TileService() {
                     ModifiersBuilders.Modifiers
                         .Builder()
                         .setClickable(clickable)
-                        .setPadding(
-                            EdgeBuilders.Padding
-                                .Builder()
-                                .setAll(dp(16f))
-                                .build(),
-                        ).build(),
+                        .build(),
                 ).addContent(column)
                 .build()
 
@@ -152,7 +146,7 @@ class PlayerTileService : TileService() {
     ) = LayoutElementBuilders.Text
         .Builder()
         .setText(value)
-        .setMultilineAlignment(LayoutElementBuilders.HORIZONTAL_ALIGNMENT_CENTER)
+        .setMultilineAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
         .setMaxLines(maxLines)
         .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE_END)
         .setFontStyle(
