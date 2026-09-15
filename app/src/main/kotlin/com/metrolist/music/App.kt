@@ -336,12 +336,9 @@ class App :
                 components {
                     add(CrashSafeInterceptor)
                 }
-                val isRoundWatch = resources.configuration.isScreenRound
-                crossfade(!isRoundWatch)
-                if (isRoundWatch) {
-                    // 16-bit bitmaps decode ~2x cheaper on watch GPUs - scroll jank fix.
-                    bitmapConfig(android.graphics.Bitmap.Config.RGB_565)
-                }
+                // Crossfade animates every image swap; on watch GPUs that costs frames
+                // while scrolling, so plain instant draws there.
+                crossfade(!resources.configuration.isScreenRound)
                 allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
                 // Memory cache for fast image loading (prevents network requests on recomposition)
                 memoryCache {
