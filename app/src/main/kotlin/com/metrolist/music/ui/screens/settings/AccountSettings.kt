@@ -265,11 +265,21 @@ fun AccountSettings(
                             }
 
                             Text(
-                                text = if (isLoggedIn) accountName else stringResource(R.string.import_session),
+                                text =
+                                    when {
+                                        isLoggedIn -> accountName
+                                        roundInsets.isRound -> stringResource(R.string.import_session)
+                                        else -> stringResource(R.string.login)
+                                    },
                             )
                         }
                     },
-                    icon = if (!isLoggedIn) painterResource(R.drawable.restore) else null,
+                    icon =
+                        if (!isLoggedIn) {
+                            painterResource(if (roundInsets.isRound) R.drawable.restore else R.drawable.login)
+                        } else {
+                            null
+                        },
                     trailingContent = {
                         if (isLoggedIn) {
                             OutlinedButton(
@@ -287,11 +297,16 @@ fun AccountSettings(
                         }
                     },
                     onClick = {
-                        if (isLoggedIn) {
-                            onClose()
-                            navController.navigate("account")
-                        } else {
-                            showImportSessionDialog = true
+                        when {
+                            isLoggedIn -> {
+                                onClose()
+                                navController.navigate("account")
+                            }
+                            roundInsets.isRound -> showImportSessionDialog = true
+                            else -> {
+                                onClose()
+                                navController.navigate("login")
+                            }
                         }
                     }
                 )
