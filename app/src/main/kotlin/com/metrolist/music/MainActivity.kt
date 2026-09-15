@@ -194,8 +194,10 @@ import androidx.datastore.preferences.core.edit
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.constants.AudioOutputKey
 import com.metrolist.music.constants.MinimalModeKey
 import com.metrolist.music.playback.PlaybackRemote
+import com.metrolist.music.utils.LinkSender
 import com.metrolist.music.utils.rememberRoundScreenInsets
 import com.metrolist.music.utils.reportException
 import com.metrolist.spotify.Spotify
@@ -767,6 +769,23 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(minimalMode) {
                     if (minimalMode && roundInsets.isRound) {
                         playerBottomSheetState.expand(androidx.compose.animation.core.spring())
+                    }
+                }
+
+                // Tile tap: open the player; warn when remote playback can't work.
+                val fromTile = remember { intent?.getBooleanExtra("from_tile", false) == true }
+                val (tileAudioOutput) = rememberPreference(AudioOutputKey, "watch")
+                LaunchedEffect(fromTile) {
+                    if (fromTile) {
+                        playerBottomSheetState.expand(androidx.compose.animation.core.spring())
+                        if (minimalMode &&
+                            tileAudioOutput == "phone" &&
+                            !LinkSender.hasConnectedNodeQuick(this@MainActivity)
+                        ) {
+                            android.widget.Toast
+                                .makeText(this@MainActivity, R.string.minimal_tile_offline, android.widget.Toast.LENGTH_LONG)
+                                .show()
+                        }
                     }
                 }
                 val playerAwareWindowInsets =

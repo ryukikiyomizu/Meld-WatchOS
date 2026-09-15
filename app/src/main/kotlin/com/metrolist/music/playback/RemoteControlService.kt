@@ -23,6 +23,7 @@ class RemoteControlService : WearableListenerService() {
                 val on = String(event.data) == "1"
                 runBlocking { dataStore.edit { it[MinimalModeKey] = on } }
                 Timber.d("RemoteControlService: minimal mode -> $on")
+                refreshTile()
             }
             LinkSender.PATH_PLAYBACK -> handleCommand(String(event.data))
             LinkSender.PATH_PLAYBACK_STATE -> handleState(String(event.data))
@@ -41,6 +42,7 @@ class RemoteControlService : WearableListenerService() {
             "prev" -> player.seekToPrevious()
         }
         pushState()
+        refreshTile()
     }
 
     fun pushState() {
@@ -72,8 +74,18 @@ class RemoteControlService : WearableListenerService() {
                     position = json.optLong("position"),
                     duration = json.optLong("duration"),
                 )
+            refreshTile()
         } catch (e: Exception) {
             Timber.w(e, "RemoteControlService: bad state payload")
+        }
+    }
+
+    private fun refreshTile() {
+        try {
+            androidx.wear.tiles.TileService
+                .getUpdater(this)
+                .requestUpdate(com.metrolist.music.ui.widget.PlayerTileService::class.java)
+        } catch (_: Exception) {
         }
     }
 }

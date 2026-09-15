@@ -233,6 +233,7 @@ dependencies {
     implementation(libs.play.services.wearable)
     implementation(libs.wear.compose.material3)
     implementation(libs.wear.compose.foundation)
+    implementation(libs.wear.tiles)
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)

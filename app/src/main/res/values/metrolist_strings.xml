@@ -1135,6 +1135,8 @@
     <string name="audio_output">Audio output</string>
     <string name="audio_output_watch">Watch (this device)</string>
     <string name="audio_output_phone">Phone</string>
+    <string name="minimal_tile_offline">Connect to phone or turn off minimal mode</string>
+    <string name="tile_open_player">Tap to open player</string>
     <string name="wear_battery_sync">Wear battery &amp; sync</string>
     <string name="wear_battery_saver">Battery saver</string>
     <string name="wear_battery_saver_desc">Stops marquee animation and auto-sync on the watch</string>
