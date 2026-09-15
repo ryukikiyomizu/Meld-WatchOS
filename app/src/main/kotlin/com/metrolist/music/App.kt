@@ -378,10 +378,9 @@ class App :
                 if (request.size == coil3.size.Size.ORIGINAL) {
                     builder.size(coil3.size.Size(320, 320))
                 }
-                builder.bitmapConfig(android.graphics.Bitmap.Config.RGB_565)
                 request = builder.build()
             }
-            return chain.proceed(request)
+            return chain.with(request).proceed()
         }
     }
 

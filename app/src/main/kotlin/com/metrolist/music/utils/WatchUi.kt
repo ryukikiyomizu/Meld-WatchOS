@@ -10,7 +10,6 @@ import android.content.res.Configuration
 import android.os.Build
 import android.util.DisplayMetrics
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.animation.animateItem
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
