@@ -175,11 +175,6 @@ import com.metrolist.music.ui.menu.YouTubePlaylistMenu
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.utils.SnapLayoutInfoProvider
 import com.metrolist.music.utils.rememberRoundScreenInsets
-
-/** Item placement animations are costly on watch GPUs; skip them there. */
-@Composable
-fun Modifier.watchAnimateItem(): Modifier =
-    if (LocalConfiguration.current.isScreenRound) this else this.animateItem()
 import com.metrolist.music.utils.isSpotifyId
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
@@ -2891,3 +2886,8 @@ fun HomeScreen(
     }
 }
 
+
+/** Item placement animations are costly on watch GPUs; skip them there. */
+@Composable
+fun Modifier.watchAnimateItem(): Modifier =
+    if (LocalConfiguration.current.isScreenRound) this else this.animateItem()
