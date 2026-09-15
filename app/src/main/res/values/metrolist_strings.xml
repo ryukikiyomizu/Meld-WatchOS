@@ -1140,7 +1140,7 @@
     <string name="offload_to_phone">Offload sync to phone</string>
     <string name="offload_to_phone_desc">While the paired phone runs Meld it owns syncing; the watch can still sync manually</string>
     <string name="sync_stats_title">Sync stats</string>
-    <string name="sync_stats">Last auto-sync %1$s &#183; skipped %2$d</string>
+    <string name="sync_stats">Last %1$s &#183; +%2$d / &#8722;%3$d &#183; skipped %4$d</string>
     <string name="credits_porter">Developer (Porter)</string>
     <string name="double_pinch">Double pinch</string>
     <string name="double_pinch_description">Pinch twice quickly on the player to trigger the selected action.</string>

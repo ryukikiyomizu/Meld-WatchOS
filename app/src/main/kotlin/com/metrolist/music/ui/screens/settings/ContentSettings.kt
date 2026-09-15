@@ -98,6 +98,9 @@ import com.metrolist.music.constants.AutoSyncPolicyKey
 import com.metrolist.music.constants.OffloadToPhoneKey
 import com.metrolist.music.constants.WearBatterySaverKey
 import com.metrolist.music.constants.LastFullSyncKey
+import com.metrolist.music.constants.SyncAddedKey
+import com.metrolist.music.constants.SyncRemovedKey
+import com.metrolist.music.constants.SyncDeltaSkipKey
 import com.metrolist.music.constants.SyncSkipCountKey
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.rememberPreference
@@ -766,11 +769,15 @@ fun ContentSettings(
                     title = { Text(stringResource(R.string.sync_stats_title)) },
                     description = {
                         val last = dsPrefs[LastFullSyncKey] ?: 0L
-                        val skips = dsPrefs[SyncSkipCountKey] ?: 0
+                        val skips = (dsPrefs[SyncSkipCountKey] ?: 0) + (dsPrefs[SyncDeltaSkipKey] ?: 0)
+                        val added = dsPrefs[SyncAddedKey] ?: 0
+                        val removed = dsPrefs[SyncRemovedKey] ?: 0
                         Text(
                             stringResource(
                                 R.string.sync_stats,
                                 if (last > 0) java.time.Instant.ofEpochSecond(last).toString().take(16).replace("T", " ") else "—",
+                                added,
+                                removed,
                                 skips
                             )
                         )
