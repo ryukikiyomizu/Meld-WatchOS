@@ -562,6 +562,7 @@ fun BackupAndRestore(
                                         context,
                                         when {
                                             result.delivered > 0 -> R.string.session_sent_to_watch
+                                            !result.wearableReady -> R.string.link_service_unavailable
                                             result.nodesFound == 0 -> R.string.link_no_node
                                             else -> R.string.link_send_failed
                                         },

@@ -8,8 +8,12 @@ package com.metrolist.music.utils
 import android.content.Context
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.wearable.Node
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.Wearable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -26,6 +30,7 @@ object LinkSender {
     data class SendResult(
         val nodesFound: Int,
         val delivered: Int,
+        val wearableReady: Boolean,
     )
 
     /**
@@ -39,30 +44,57 @@ object LinkSender {
         path: String,
         text: String,
     ): SendResult =
-        try {
-            val availability =
-                GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
-            if (availability != ConnectionResult.SUCCESS) {
-                Timber.d("LinkSender: Play services unavailable ($availability)")
-                return SendResult(0, 0)
-            }
-            val nodeClient = Wearable.getNodeClient(context)
-            val nodes = Tasks.await(nodeClient.connectedNodes)
-            val messageClient = Wearable.getMessageClient(context)
-            var sent = 0
-            for (node in nodes) {
-                try {
-                    Tasks.await(
-                        messageClient.sendMessage(node.id, path, text.toByteArray()),
-                    )
-                    sent++
-                } catch (e: Exception) {
-                    Timber.w(e, "LinkSender: failed to reach node ${node.displayName}")
+        withContext(Dispatchers.IO) {
+            try {
+                val availability =
+                    GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
+                if (availability != ConnectionResult.SUCCESS) {
+                    Timber.d("LinkSender: Play services unavailable ($availability)")
+                    return@withContext SendResult(0, 0, false)
                 }
+                val nodeClient = Wearable.getNodeClient(context)
+                val messageClient = Wearable.getMessageClient(context)
+
+                // The local node proves the wearable channel itself is alive.
+                val localNode =
+                    try {
+                        Tasks.await(nodeClient.localNode)
+                    } catch (e: Exception) {
+                        Timber.w(e, "LinkSender: local node unavailable")
+                        null
+                    }
+                if (localNode == null) return@withContext SendResult(0, 0, false)
+
+                // Peer list can lag a few seconds after pairing — poll briefly.
+                var nodes: List<Node> = emptyList()
+                repeat(4) {
+                    if (nodes.isNotEmpty()) return@repeat
+                    nodes =
+                        try {
+                            Tasks.await(nodeClient.connectedNodes)
+                        } catch (e: Exception) {
+                            Timber.w(e, "LinkSender: connectedNodes failed")
+                            emptyList()
+                        }
+                    if (nodes.isEmpty()) delay(1500)
+                }
+                if (nodes.isEmpty()) return@withContext SendResult(0, 0, true)
+
+                var sent = 0
+                for (node in nodes) {
+                    try {
+                        Tasks.await(
+                            messageClient.sendMessage(node.id, path, text.toByteArray()),
+                        )
+                        sent++
+                    } catch (e: Exception) {
+                        Timber.w(e, "LinkSender: failed to reach node ${node.displayName}")
+                    }
+                }
+                SendResult(nodes.size, sent, true)
+            } catch (e: Exception) {
+                Timber.w(e, "LinkSender: send failed")
+                SendResult(0, 0, false)
             }
-            SendResult(nodes.size, sent)
-        } catch (e: Exception) {
-            Timber.w(e, "LinkSender: send failed")
-            SendResult(0, 0)
         }
 }

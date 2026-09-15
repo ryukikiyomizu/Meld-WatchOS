@@ -419,6 +419,7 @@ fun PlayerMenu(
                                     val toastText =
                                         when {
                                             result.delivered > 0 -> context.getString(R.string.link_sent)
+                                            !result.wearableReady -> context.getString(R.string.link_service_unavailable)
                                             result.nodesFound == 0 -> context.getString(R.string.link_no_node)
                                             else -> context.getString(R.string.link_send_failed)
                                         }
