@@ -470,7 +470,7 @@ fun SongGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = listMarquee().fillMaxWidth()
+            modifier = Modifier.listMarquee().fillMaxWidth()
         )
     },
     subtitle = {
@@ -690,7 +690,7 @@ fun AlbumGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = listMarquee().fillMaxWidth()
+            modifier = Modifier.listMarquee().fillMaxWidth()
         )
     },
     subtitle = {
@@ -861,7 +861,7 @@ fun PlaylistGridItem(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = listMarquee().fillMaxWidth()
+            modifier = Modifier.listMarquee().fillMaxWidth()
         )
     },
     subtitle = {
@@ -1096,7 +1096,7 @@ fun YouTubeGridItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = if (item is ArtistItem) TextAlign.Center else TextAlign.Start,
-            modifier = listMarquee().fillMaxWidth()
+            modifier = Modifier.listMarquee().fillMaxWidth()
         )
     },
     subtitle = {
