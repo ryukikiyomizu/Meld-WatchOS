@@ -1123,7 +1123,8 @@
     <string name="send_link">Send link to phone</string>
     <string name="link_sent">Link sent to phone</string>
     <string name="link_send_failed">Couldn\'t reach the paired phone</string>
-    <string name="link_no_node">Meld isn&#8217;t running on the paired phone</string>
+    <string name="link_no_node">No Meld node found. Install Meld on the paired device and open it once, then retry.</string>
+    <string name="link_service_unavailable">Wearable service not ready. Check Google Play services and Bluetooth.</string>
     <string name="credits_porter">Developer (Porter)</string>
     <string name="double_pinch">Double pinch</string>
     <string name="double_pinch_description">Pinch twice quickly on the player to trigger the selected action.</string>
