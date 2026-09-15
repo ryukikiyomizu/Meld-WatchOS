@@ -313,6 +313,7 @@ private fun NewMiniPlayer(
                 .height(MiniPlayerHeight)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                 .padding(horizontal = 12.dp + roundInsets.bottomBarHorizontal)
+                .padding(bottom = if (roundInsets.isRound) 8.dp else 0.dp)
                 .let { baseModifier ->
                     if (swipeThumbnail) {
                         baseModifier.pointerInput(Unit) {

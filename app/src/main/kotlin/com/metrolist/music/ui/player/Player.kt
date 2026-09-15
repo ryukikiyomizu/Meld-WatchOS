@@ -1743,9 +1743,16 @@ fun BottomSheetPlayer(
                     modifier =
                         Modifier
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                            .padding(top = roundInsets.playerTop)
                             .padding(horizontal = roundInsets.playerHorizontal)
-                            .padding(bottom = (if (roundInsets.isRound) 0.dp else bottomPadding) + roundInsets.playerBottom)
+                            .padding(
+                                bottom =
+                                    (if (roundInsets.isRound) 0.dp else bottomPadding) +
+                                        if (roundInsets.isRound) {
+                                            roundInsets.playerBottom - 10.dp
+                                        } else {
+                                            roundInsets.playerBottom
+                                        },
+                            )
                             .animateContentSize()
                             .doublePinchGesture(doublePinchAction != "off", onDoublePinch),
                 ) {
@@ -1784,7 +1791,7 @@ fun BottomSheetPlayer(
                         )
                     }
 
-                    Spacer(Modifier.height(if (roundInsets.isRound) 12.dp else 30.dp))
+                    Spacer(Modifier.height(if (roundInsets.isRound) 6.dp else 30.dp))
                 }
             }
         }

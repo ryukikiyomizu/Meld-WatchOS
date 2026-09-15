@@ -1239,7 +1239,8 @@ class MainActivity : ComponentActivity() {
                         Row(
                             Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = roundInsets.horizontal),
+                                .padding(horizontal = roundInsets.horizontal)
+                                .padding(top = if (roundInsets.isRound) 8.dp else 0.dp),
                         ) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
                                 remember(navController, coroutineScope, topAppBarScrollBehavior, playerBottomSheetState) {
