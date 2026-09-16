@@ -156,17 +156,20 @@ jobs:
             exit 1
           fi
 
-      - name: Show profile files
+      - name: Stage profile files
         if: success()
         run: |
-          echo "::notice::LEG-FILES: $(find app/src -name '*prof*' -o -name '*baseline*' | tr '\n' '|')"
+          mkdir -p bp-out
+          find app/src -path '*generated/baselineProfiles*' -name '*.txt' -exec cp {} bp-out/ \;
+          echo "::notice::LEG-STAGED: $(ls -la bp-out | tr '\n' '|')"
+          wc -c bp-out/*.txt
 
       - name: Upload generated profile
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: baseline-profile-${{ matrix.leg }}
-          path: app/src/
+          path: bp-out/
           if-no-files-found: error
 
   result:
@@ -208,16 +211,17 @@ jobs:
       - name: Commit generated profile to branch
         run: |
           echo "::notice::OUT-TREE: $(find out -type f | tr '\n' '|')"
-          PROF=$(find out -name "baseline-prof.txt" | head -1)
-          if [ -z "$PROF" ]; then
+          if ! find out -name "*.txt" | grep -q .; then
             echo "::error::no generated profile to commit"
             exit 1
           fi
           mkdir -p app/src/main/baselineProfiles
-          cp "$PROF" app/src/main/baselineProfiles/baseline-prof.txt
+          find out -name "baseline-prof.txt" -exec cp {} app/src/main/baselineProfiles/baseline-prof.txt \;
+          find out -name "startup-prof.txt" -exec cp {} app/src/main/baselineProfiles/startup-prof.txt \;
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app/src/main/baselineProfiles
+          echo "::notice::DEST: $(ls -la app/src/main/baselineProfiles | tr '\n' '|')" 
           if git diff --cached --quiet; then
             echo "profile unchanged"
           else
