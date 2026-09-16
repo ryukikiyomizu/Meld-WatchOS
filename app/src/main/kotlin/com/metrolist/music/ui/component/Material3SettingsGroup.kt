@@ -32,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
+import com.metrolist.music.utils.rememberRoundScreenInsets
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
@@ -50,12 +52,16 @@ fun Material3SettingsGroup(
             .fillMaxWidth()
     ) {
         // Section title
+        val roundInsets = rememberRoundScreenInsets()
         title?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                textAlign = if (roundInsets.isRound) TextAlign.Center else TextAlign.Start,
+                modifier = Modifier
+                    .padding(bottom = 8.dp, top = 8.dp)
+                    .then(if (roundInsets.isRound) Modifier.fillMaxWidth() else Modifier)
             )
         }
 

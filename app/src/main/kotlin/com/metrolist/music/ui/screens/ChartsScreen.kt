@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -71,7 +70,6 @@ import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.NavigationTitle
-import com.metrolist.music.ui.component.YouTubeGridItem
 import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.ui.component.shimmer.GridItemPlaceHolder
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
@@ -314,62 +312,6 @@ fun ChartsScreen(
                                                     ),
                                         )
                                     }
-                                }
-                            }
-                        }
-                    }
-
-                    chartsPage?.sections?.find { it.title == "Top music videos" }?.let { topVideosSection ->
-                        item(key = "top_videos_title") {
-                            NavigationTitle(
-                                title = stringResource(R.string.top_music_videos),
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
-                        item(key = "top_videos_content") {
-                            LazyRow(
-                                contentPadding =
-                                    WindowInsets.systemBars
-                                        .only(WindowInsetsSides.Horizontal)
-                                        .asPaddingValues(),
-                                modifier = Modifier.animateItem(),
-                            ) {
-                                items(
-                                    items = topVideosSection.items.filterIsInstance<SongItem>().distinctBy { it.id },
-                                    key = { "charts_video_${it.id}" },
-                                ) { video ->
-                                    YouTubeGridItem(
-                                        item = video,
-                                        isActive = video.id == mediaMetadata?.id,
-                                        isPlaying = isPlaying,
-                                        coroutineScope = coroutineScope,
-                                        modifier =
-                                            Modifier
-                                                .combinedClickable(
-                                                    onClick = {
-                                                        if (video.id == mediaMetadata?.id) {
-                                                            playerConnection.togglePlayPause()
-                                                        } else {
-                                                            playerConnection.playQueue(
-                                                                YouTubeQueue(
-                                                                    endpoint = WatchEndpoint(videoId = video.id),
-                                                                    preloadItem = video.toMediaMetadata(),
-                                                                ),
-                                                            )
-                                                        }
-                                                    },
-                                                    onLongClick = {
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        menuState.show {
-                                                            YouTubeSongMenu(
-                                                                song = video,
-                                                                navController = navController,
-                                                                onDismiss = menuState::dismiss,
-                                                            )
-                                                        }
-                                                    },
-                                                ).animateItem(),
-                                    )
                                 }
                             }
                         }

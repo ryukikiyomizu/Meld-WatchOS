@@ -210,10 +210,14 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
+        <!-- Disabled: density scaling for the watch UI is applied once in
+             MainActivity.attachBaseContext (see utils/WatchUi.kt), which also
+             honors the density preset from the appearance settings. Keeping
+             this provider enabled would apply a second, conflicting scale. -->
         <provider
             android:name="com.dpi.DensityScaler"
             android:authorities="${applicationId}.com.dpi.DensityScaler"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="false" />
 
         <activity
@@ -364,6 +368,73 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name=".playback.LinkReceiverService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/meld/copy-link"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".ui.widget.PlayerTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher_foreground"
+            android:label="@string/app_name"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".playback.AudioStreamReceiverService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/meld/audio"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".playback.RemoteControlService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/meld/minimal"
+                    android:scheme="wear" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/meld/playback"
+                    android:scheme="wear" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/meld/playback_state"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".playback.SessionReceiverService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/meld/session"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

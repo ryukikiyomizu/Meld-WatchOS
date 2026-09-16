@@ -60,6 +60,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.metrolist.music.R
 import com.metrolist.music.ui.screens.settings.AccountSettings
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import kotlinx.coroutines.delay
 
 @Composable
@@ -142,6 +143,9 @@ fun AccountSettingsDialog(
     onDismiss: () -> Unit,
     latestVersionName: String,
 ) {
+    // Round Wear OS displays: the account sheet becomes a full-bleed screen
+    // that flows through the circle, like native watch surfaces.
+    val roundInsets = rememberRoundScreenInsets()
     Dialog(
         onDismissRequest = onDismiss,
         properties =
@@ -164,10 +168,16 @@ fun AccountSettingsDialog(
         ) {
             Surface(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 72.dp, start = 16.dp, end = 16.dp)
-                        .clip(RoundedCornerShape(28.dp)),
+                    if (roundInsets.isRound) {
+                        Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(28.dp))
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 72.dp, start = 16.dp, end = 16.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                    },
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp,

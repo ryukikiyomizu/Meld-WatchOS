@@ -28,6 +28,17 @@ fun Context.isUserLoggedIn(): Boolean {
     }
 }
 
+fun Context.isCharging(): Boolean {
+    val bm = getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+    return bm.isCharging
+}
+
+fun Context.isOnWifi(): Boolean {
+    val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val net = cm.activeNetwork ?: return false
+    return cm.getNetworkCapabilities(net)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+}
+
 fun Context.isInternetConnected(): Boolean {
     val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)

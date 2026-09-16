@@ -1,0 +1,135 @@
+name: Publish Watch Preview APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/01a09e33-meld-watchos
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build and publish APK to release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Init metroproto submodule
+        run: git submodule update --init metroproto
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Set Up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-cleanup: on-success
+
+      - name: Setup and Generate Protobuf
+        uses: ./.github/actions/setup-protobuf
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Restore preview debug keystore
+        id: preview_keystore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/watch-preview.keystore
+          key: watch-preview-keystore
+
+      - name: Generate preview debug keystore if not cached
+        if: steps.preview_keystore.outputs.cache-hit != 'true'
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/watch-preview.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Meld Watch Preview,O=Meld,C=US"
+
+      - name: Save preview debug keystore
+        if: steps.preview_keystore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: app/watch-preview.keystore
+          key: ${{ steps.preview_keystore.outputs.cache-primary-key }}
+
+      - name: Build FOSS Debug APK (no lint, no tests)
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain assembleFossPreview -x lint -x lintFossPreview --warning-mode summary 2>&1 | tee /tmp/gradle_build.log
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: /tmp/gradle_build.log
+        env:
+          METROLIST_APPLICATION_ID: com.meld.app
+          METROLIST_APP_NAME: Meld
+          METROLIST_DEBUG_KEYSTORE_PATH: watch-preview.keystore
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Surface build errors
+        if: failure()
+        run: |
+          if [ -f /tmp/gradle_build.log ]; then
+            grep -aE "^e: |error:|FAILED$|What went wrong" /tmp/gradle_build.log | tail -20 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+            echo "::notice::--- raw tail of gradle log ---"
+            tail -80 /tmp/gradle_build.log | tr -d '\r' | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+          fi
+          exit 1
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          find app/build/outputs/apk/foss/preview -name "*.apk" | head -1 | xargs -I{} cp {} out/meld-watchos-preview.apk
+          cp out/meld-watchos-preview.apk out/meld-android-preview.apk
+          ls -la out/
+
+      - name: Upload APK to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="watchos-preview"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/meld-watchos-preview.apk out/meld-android-preview.apk --clobber
+            gh release edit "$TAG" \
+              --notes "Preview APK built from branch \`$GITHUB_REF_NAME\` (unmerged work — PR #1).
+          Commit: ${GITHUB_SHA:0:7}
+
+          Debug-signed build of the FOSS variant for testing on Wear OS watches.
+          Install with: adb install meld-watchos-preview.apk"
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --latest=false \
+              --title "Watch OS preview build (unmerged PR #1)" \
+              --notes "Preview APK built from branch \`$GITHUB_REF_NAME\` (unmerged work — PR #1).
+          Commit: ${GITHUB_SHA:0:7}
+
+          Debug-signed build of the FOSS variant for testing on Wear OS watches.
+          Install with: adb install meld-watchos-preview.apk" \
+              out/meld-watchos-preview.apk \
+              out/meld-android-preview.apk
+          fi
+          echo "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"

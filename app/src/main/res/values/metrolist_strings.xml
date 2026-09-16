@@ -1036,6 +1036,35 @@
     <string name="checking_previous_account">Checking for previous account…</string>
     <string name="no_account_found">No account found</string>
 
+    <!-- Session transfer (phone -> watch) -->
+    <string name="session_transfer">Session transfer</string>
+    <string name="export_session">Export session</string>
+    <string name="export_session_description">Send your signed-in session to another device</string>
+    <string name="import_session">Import session</string>
+    <string name="import_session_description">Sign in using a session from another device</string>
+    <string name="session_export_none">No account to export. Sign in first.</string>
+    <string name="session_export_help">Move this code to the other device (share it, or save it to a file and transfer it) and use Import session there. Anyone with this code can access your accounts.</string>
+    <string name="session_copy">Copy</string>
+    <string name="session_share">Share</string>
+    <string name="session_save_file">Save to file</string>
+    <string name="session_code_copied">Session code copied</string>
+    <string name="session_code_saved">Session code saved</string>
+    <string name="session_save_failed">Could not save the session file</string>
+    <string name="session_import_help">Open the session file or paste the session code exported from your other device.</string>
+    <string name="session_import_from_file">Open file</string>
+    <string name="session_import_from_clipboard">Paste from clipboard</string>
+    <string name="session_import_from_adb">Pushed via ADB</string>
+    <string name="session_adb_help">From a computer with the watch connected over ADB, push the exported session file to this device:\n\nadb push meld-session.txt /sdcard/Android/data/%1$s/files/session.txt\n\nThen tap Check again.</string>
+    <string name="session_adb_retry">Check again</string>
+    <string name="session_adb_not_found">No session file found yet. Push it with adb and try again.</string>
+    <string name="session_code_invalid">No valid session code found</string>
+    <string name="session_import_confirm_title">Import session?</string>
+    <string name="session_import_confirm_message">This device will use the account below. Any existing sign-in on this device will be replaced, and the app will restart.</string>
+    <string name="session_import">Import</string>
+    <string name="session_import_unknown_account">Unknown account</string>
+    <string name="session_import_includes_youtube">Includes YouTube Music account</string>
+    <string name="session_import_includes_spotify">Includes Spotify session</string>
+
     <!-- Local Files -->
     <string name="filter_local_files">Local files</string>
     <string name="local_files">Local files</string>
@@ -1089,6 +1118,48 @@
     <string name="time_transfer_listen_time_label">Listen time: </string>
     <string name="time_transfer_convert">Convert</string>
     <string name="song_dropdown_more_results">Keep typing to narrow results (%d more)</string>
+
+    <!-- Watch: send link / double pinch / porter -->
+    <string name="send_link">Send link to phone</string>
+    <string name="link_sent">Link sent to phone</string>
+    <string name="link_send_failed">Couldn\'t reach the paired phone</string>
+    <string name="link_no_node">No Meld node found. Install Meld on the paired device and open it once, then retry.</string>
+    <string name="link_service_unavailable">Wearable service not ready. Check Google Play services and Bluetooth.</string>
+    <string name="send_link_watch">Send link</string>
+    <string name="login_use_channel">Use this channel</string>
+    <string name="login_channel_hint">Need another channel? Switch in YouTube Music&#8217;s account menu first, then continue.</string>
+    <string name="switch_channel">Switch channel</string>
+    <string name="minimal_mode">Minimal mode</string>
+    <string name="minimal_mode_desc">Watch becomes a remote player head-unit; the phone controls the library</string>
+    <string name="minimal_connect_required">Connect the watch and phone first</string>
+    <string name="minimal_mode_off">Turn off Minimal mode</string>
+    <string name="audio_output">Audio output</string>
+    <string name="audio_output_watch">Watch (this device)</string>
+    <string name="audio_output_phone">Phone</string>
+    <string name="minimal_tile_offline">Connect to phone or turn off minimal mode</string>
+    <string name="tile_open_player">Tap to open player</string>
+    <string name="wear_battery_sync">Wear battery &amp; sync</string>
+    <string name="wear_battery_saver">Battery saver</string>
+    <string name="wear_battery_saver_desc">Stops marquee animation and auto-sync on the watch</string>
+    <string name="auto_sync_policy">Auto-sync when</string>
+    <string name="sync_policy_always">Always</string>
+    <string name="sync_policy_charging">While charging</string>
+    <string name="sync_policy_wifi">On Wi-Fi</string>
+    <string name="sync_policy_off">Off</string>
+    <string name="offload_to_phone">Offload sync to phone</string>
+    <string name="offload_to_phone_desc">While the paired phone runs Meld it owns syncing; the watch can still sync manually</string>
+    <string name="sync_stats_title">Sync stats</string>
+    <string name="sync_stats">Last %1$s &#183; +%2$d / &#8722;%3$d &#183; skipped %4$d</string>
+    <string name="credits_porter">Developer (Porter)</string>
+    <string name="double_pinch">Double pinch</string>
+    <string name="double_pinch_description">Pinch twice quickly on the player to trigger the selected action.</string>
+    <string name="dp_action_pause">Pause / Play</string>
+    <string name="dp_action_next">Next</string>
+    <string name="dp_action_previous">Previous</string>
+    <string name="dp_action_like">Like</string>
+    <string name="dp_action_off">Off</string>
+    <string name="session_send_to_watch">Send to watch</string>
+    <string name="session_sent_to_watch">Session sent to watch</string>
 
     <!-- Accessibility -->
     <string name="back">Back</string>

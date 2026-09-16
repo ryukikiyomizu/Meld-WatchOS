@@ -338,7 +338,7 @@ fun YouTubeSongMenu(
                             showChoosePlaylistDialog = true
                         }
                     ),
-                    NewAction(
+                    if (!LocalContext.current.resources.configuration.isScreenRound) NewAction(
                         icon = {
                             Icon(
                                 painter = painterResource(R.drawable.share),
@@ -357,7 +357,7 @@ fun YouTubeSongMenu(
                             context.startActivity(Intent.createChooser(intent, null))
                             onDismiss()
                         }
-                    ),
+                    ) else null,
                 ) + if (com.metrolist.spotify.Spotify.isAuthenticated()) {
                     listOf(
                         NewAction(

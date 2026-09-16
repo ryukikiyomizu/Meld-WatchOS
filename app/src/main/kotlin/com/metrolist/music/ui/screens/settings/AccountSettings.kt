@@ -69,6 +69,7 @@ import com.metrolist.music.ui.component.InfoLabel
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.PreferenceEntry
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import com.metrolist.music.ui.component.TextFieldDialog
 import com.metrolist.music.utils.Updater
 import com.metrolist.music.utils.rememberPreference
@@ -102,15 +103,18 @@ fun AccountSettings(
     val accountName by homeViewModel.accountName.collectAsState()
     val accountImageUrl by homeViewModel.accountImageUrl.collectAsState()
 
+    var showImportSessionDialog by remember { mutableStateOf(false) }
     var showToken by remember { mutableStateOf(false) }
     var showTokenEditor by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val roundInsets = rememberRoundScreenInsets()
+
     Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp)
+            .padding(16.dp + roundInsets.horizontal)
             .verticalScroll(rememberScrollState())
     ) {
         Row(
@@ -131,6 +135,19 @@ fun AccountSettings(
         }
 
         Spacer(Modifier.height(12.dp))
+
+        if (isLoggedIn) {
+            OutlinedButton(
+                onClick = {
+                    onClose()
+                    navController.navigate("login")
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.switch_channel))
+            }
+            Spacer(Modifier.height(12.dp))
+        }
 
         // Logout confirmation dialog
         if (showLogoutDialog) {
@@ -261,11 +278,21 @@ fun AccountSettings(
                             }
 
                             Text(
-                                text = if (isLoggedIn) accountName else stringResource(R.string.login),
+                                text =
+                                    when {
+                                        isLoggedIn -> accountName
+                                        roundInsets.isRound -> stringResource(R.string.import_session)
+                                        else -> stringResource(R.string.login)
+                                    },
                             )
                         }
                     },
-                    icon = if (!isLoggedIn) painterResource(R.drawable.login) else null,
+                    icon =
+                        if (!isLoggedIn) {
+                            painterResource(if (roundInsets.isRound) R.drawable.restore else R.drawable.login)
+                        } else {
+                            null
+                        },
                     trailingContent = {
                         if (isLoggedIn) {
                             OutlinedButton(
@@ -283,11 +310,16 @@ fun AccountSettings(
                         }
                     },
                     onClick = {
-                        onClose()
-                        if (isLoggedIn) {
-                            navController.navigate("account")
-                        } else {
-                            navController.navigate("login")
+                        when {
+                            isLoggedIn -> {
+                                onClose()
+                                navController.navigate("account")
+                            }
+                            roundInsets.isRound -> showImportSessionDialog = true
+                            else -> {
+                                onClose()
+                                navController.navigate("login")
+                            }
                         }
                     }
                 )
@@ -432,5 +464,11 @@ fun AccountSettings(
                 }
             }
         }
+    }
+
+    if (showImportSessionDialog) {
+        SessionImportDialogs(
+            onDismiss = { showImportSessionDialog = false },
+        )
     }
 }

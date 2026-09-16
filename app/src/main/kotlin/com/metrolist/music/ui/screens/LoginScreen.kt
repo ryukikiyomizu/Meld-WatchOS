@@ -12,7 +12,19 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,11 +74,12 @@ fun LoginScreen(
     var accountName by rememberPreference(AccountNameKey, "")
     var accountEmail by rememberPreference(AccountEmailKey, "")
     var accountChannelHandle by rememberPreference(AccountChannelHandleKey, "")
-    var hasCompletedLogin by remember { mutableStateOf(false) }
+    var detectedName by remember { mutableStateOf<String?>(null) }
 
     var webView: WebView? = null
 
-    AndroidView(
+    Box {
+        AndroidView(
         modifier = Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
             .fillMaxSize(),
@@ -77,45 +90,20 @@ fun LoginScreen(
                         loadUrl("javascript:Android.onRetrieveVisitorData(window.yt.config_.VISITOR_DATA)")
                         loadUrl("javascript:Android.onRetrieveDataSyncId(window.yt.config_.DATASYNC_ID)")
 
-                        if (url?.startsWith("https://music.youtube.com") == true && !hasCompletedLogin) {
+                        if (url?.startsWith("https://music.youtube.com") == true) {
+                            // Keep cookie/dataSyncId fresh on every navigation so the user can
+                            // switch channels inside the WebView before confirming.
                             innerTubeCookie = CookieManager.getInstance().getCookie(url)
-                            hasCompletedLogin = true
 
                             coroutineScope.launch {
-                                // Small delay to ensure preferences are saved
-                                delay(500)
+                                delay(400)
 
-                                // Initialize YouTube object with new authentication data
                                 YouTube.cookie = innerTubeCookie
                                 YouTube.dataSyncId = dataSyncId
                                 YouTube.visitorData = visitorData
 
-                                Timber.d("Login: YouTube object initialized, validating...")
-
-                                YouTube.accountInfo().onSuccess {
-                                    accountName = it.name
-                                    accountEmail = it.email.orEmpty()
-                                    accountChannelHandle = it.channelHandle.orEmpty()
-
-                                    Timber.d("Login: Successfully logged in as ${it.name}, restarting app...")
-
-                                    // Clean up WebView
-                                    webView?.apply {
-                                        stopLoading()
-                                        clearHistory()
-                                        clearCache(true)
-                                        clearFormData()
-                                    }
-
-                                    // Restart app to apply login state throughout
-                                    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                                    intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                    context.startActivity(intent)
-                                    Runtime.getRuntime().exit(0)
-                                }.onFailure {
-                                    Timber.e(it, "Login: Authentication validation failed")
-                                    hasCompletedLogin = false // Allow retry
-                                    reportException(it)
+                                YouTube.accountInfo().onSuccess { info ->
+                                    detectedName = info.name
                                 }
                             }
                         }
@@ -145,7 +133,67 @@ fun LoginScreen(
                 loadUrl("https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fmusic.youtube.com")
             }
         }
-    )
+        )
+
+        detectedName?.let { name ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(12.dp),
+            ) {
+                Column {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = stringResource(R.string.login_channel_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                YouTube.cookie = innerTubeCookie
+                                YouTube.dataSyncId = dataSyncId
+                                YouTube.visitorData = visitorData
+
+                                YouTube.accountInfo().onSuccess { info ->
+                                    accountName = info.name
+                                    accountEmail = info.email.orEmpty()
+                                    accountChannelHandle = info.channelHandle.orEmpty()
+
+                                    webView?.apply {
+                                        stopLoading()
+                                        clearHistory()
+                                        clearCache(true)
+                                        clearFormData()
+                                    }
+
+                                    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                                    intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                    context.startActivity(intent)
+                                    Runtime.getRuntime().exit(0)
+                                }.onFailure {
+                                    Timber.e(it, "Login: Authentication validation failed")
+                                    reportException(it)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.login_use_channel))
+                    }
+                }
+            }
+        }
+    }
 
     TopAppBar(
         title = { Text(stringResource(R.string.login)) },
