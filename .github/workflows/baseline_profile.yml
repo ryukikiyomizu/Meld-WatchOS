@@ -215,7 +215,7 @@ jobs:
       - name: Commit generated profile to branch
         run: |
           echo "::notice::OUT-TREE: $(find out -type f | tr '\n' '|')"
-          if ! find out -name "*.txt" | grep -q .; then
+          if ! find profx -name "*.txt" | grep -q .; then
             echo "::error::no generated profile to commit"
             exit 1
           fi
