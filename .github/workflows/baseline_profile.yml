@@ -50,11 +50,12 @@ jobs:
           ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot
           script: |
+            set -o pipefail
             adb wait-for-device
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
-            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace
+            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace 2>&1 | tee /tmp/bp.log || { tail -n 45 /tmp/bp.log | tr -d '\r' | sed 's/^/::error::/' ; exit 1; }
 
       - name: Show generated profile
         run: |
