@@ -7,6 +7,7 @@ package com.metrolist.music.playback
 
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.Channel
+import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import timber.log.Timber
 
@@ -18,7 +19,7 @@ class AudioStreamReceiverService : WearableListenerService() {
     override fun onChannelOpened(channel: Channel) {
         if (channel.path != AudioStreamPump.CHANNEL_PATH) return
         try {
-            val input = Tasks.await(channel.getInputStream(this))
+            val input = Tasks.await(Wearable.getChannelClient(this).getInputStream(channel))
             StreamBridge.audioInput = input
             WatchStreamPlayer.start(applicationContext)
             Timber.d("AudioStreamReceiver: channel opened, stream player started")

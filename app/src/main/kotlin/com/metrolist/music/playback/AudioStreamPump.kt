@@ -141,7 +141,7 @@ object AudioStreamPump {
         pumpJob =
             scope.launch {
                 try {
-                    val out = Tasks.await(opened.getOutputStream(context))
+                    val out = Tasks.await(Wearable.getChannelClient(context).getOutputStream(opened))
                     val connection = java.net.URL(streamUrl).openConnection()
                     connection.connectTimeout = 5000
                     connection.readTimeout = 20000
@@ -180,7 +180,7 @@ object AudioStreamPump {
     private fun closeChannel(context: Context) {
         channel?.let {
             try {
-                Tasks.await(it.close(context))
+                Tasks.await(Wearable.getChannelClient(context).close(it))
             } catch (_: Exception) {
             }
         }
