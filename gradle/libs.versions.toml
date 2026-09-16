@@ -12,6 +12,7 @@ castFramework = "22.3.0"
 playServicesWearable = "19.0.0"
 wearCompose = "1.7.0-beta02"
 wearTiles = "1.6.2"
+profileinstaller = "1.4.1"
 room = "2.8.4"
 hilt = "2.59.2"
 ktor = "3.4.2"
@@ -87,6 +88,7 @@ play-services-wearable = { module = "com.google.android.gms:play-services-wearab
 wear-compose-material3 = { module = "androidx.wear.compose:compose-material3", version.ref = "wearCompose" }
 wear-compose-foundation = { module = "androidx.wear.compose:compose-foundation", version.ref = "wearCompose" }
 wear-tiles = { module = "androidx.wear.tiles:tiles", version.ref = "wearTiles" }
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
 
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
