@@ -19,6 +19,7 @@ val workflowDebugKeystoreFile = debugKeystorePathOverride?.let(::file)
 
 plugins {
     id("com.android.application")
+    id("androidx.baselineprofile")
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
@@ -100,11 +101,19 @@ android {
             enableV3Signing = true
             keyPassword = debugKeyPassword
         }
-        create("previewRelease") {
-            storeFile = file("watch-preview.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+        create("preview") {
+            val previewKs = file("watch-preview.keystore")
+            if (previewKs.exists()) {
+                storeFile = previewKs
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            } else {
+                storeFile = file("${'$'}{System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
             enableV1Signing = true
             enableV2Signing = true
             enableV3Signing = true
@@ -114,13 +123,6 @@ android {
             storePassword = System.getenv("STORE_PASSWORD")
             keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
-        }
-        create("preview") {
-            initWith(getByName("release"))
-            val previewKs = file("watch-preview.keystore")
-            if (previewKs.exists()) {
-                signingConfig = signingConfigs.getByName("previewRelease")
-            }
         }
         getByName("debug") {
             keyAlias = "androiddebugkey"
@@ -143,6 +145,9 @@ android {
             ndk {
                 debugSymbolLevel = "NONE"
             }
+        }
+        create("preview") {
+            initWith(getByName("release"))
         }
         debug {
             if (applicationIdOverride == null) {
@@ -246,6 +251,8 @@ configurations.configureEach {
 }
 
 dependencies {
+    baselineProfile(project(":baselineprofile"))
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.play.services.wearable)
     implementation(libs.wear.compose.material3)
     implementation(libs.wear.compose.foundation)
