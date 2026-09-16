@@ -144,6 +144,7 @@ import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberEnumPreference
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.reportException
 import com.metrolist.music.viewmodels.LocalPlaylistViewModel
@@ -168,6 +169,7 @@ fun LocalPlaylistScreen(
     val menuState = LocalMenuState.current
     val database = LocalDatabase.current
     val haptic = LocalHapticFeedback.current
+    val roundInsets = rememberRoundScreenInsets()
     val playerConnection = LocalPlayerConnection.current ?: return
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
@@ -494,7 +496,7 @@ fun LocalPlaylistScreen(
                         EmptyPlaceholder(
                             icon = R.drawable.music_note,
                             text = stringResource(R.string.playlist_is_empty),
-                            modifier = Modifier.animateItem(),
+                            modifier = if (roundInsets.isRound) Modifier else Modifier.animateItem(),
                         )
                     }
                 } else {
@@ -508,7 +510,7 @@ fun LocalPlaylistScreen(
                                 onshowDeletePlaylistDialog = { showDeletePlaylistDialog = true },
                                 onStartSearch = { isSearching = true },
                                 snackbarHostState = snackbarHostState,
-                                modifier = Modifier.animateItem(),
+                                modifier = if (roundInsets.isRound) Modifier else Modifier.animateItem(),
                             )
                         }
                     }
@@ -519,7 +521,7 @@ fun LocalPlaylistScreen(
                             modifier =
                                 Modifier
                                     .padding(start = 16.dp)
-                                    .animateItem(),
+                                    .then(if (roundInsets.isRound) Modifier else Modifier.animateItem()),
                         ) {
                             SortHeader(
                                 sortType = sortType,
@@ -719,15 +721,15 @@ fun LocalPlaylistScreen(
                         )
                     }
 
-                    if (locked || inSelectMode || !swipeRemoveEnabled) {
-                        Box(modifier = Modifier.animateItem()) {
+                    if (locked || inSelectMode || !swipeRemoveEnabled || roundInsets.isRound) {
+                        Box(modifier = if (roundInsets.isRound) Modifier else Modifier.animateItem()) {
                             content()
                         }
                     } else {
                         SwipeToDismissBox(
                             state = dismissBoxState,
                             backgroundContent = {},
-                            modifier = Modifier.animateItem(),
+                            modifier = if (roundInsets.isRound) Modifier else Modifier.animateItem(),
                         ) {
                             content()
                         }

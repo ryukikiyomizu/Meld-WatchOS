@@ -126,6 +126,7 @@ import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.utils.listMarquee
 import com.metrolist.music.utils.rememberRoundScreenInsets
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -638,7 +639,7 @@ fun Queue(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.basicMarquee(),
+                                modifier = Modifier.listMarquee(),
                             )
                         }
                     }
@@ -679,7 +680,7 @@ fun Queue(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         textAlign = TextAlign.Center,
-                                        modifier = Modifier.basicMarquee(),
+                                        modifier = Modifier.listMarquee(),
                                     )
                                 } else {
                                     Text(
@@ -688,7 +689,7 @@ fun Queue(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         textAlign = TextAlign.Center,
-                                        modifier = Modifier.basicMarquee(),
+                                        modifier = Modifier.listMarquee(),
                                     )
                                 }
                             }
@@ -989,7 +990,7 @@ fun Queue(
                         val content: @Composable () -> Unit = {
                             Row(
                                 horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.animateItem(),
+                                modifier = if (roundInsets.isRound) Modifier else Modifier.animateItem(),
                             ) {
                                 MediaMetadataListItem(
                                     mediaMetadata = window.mediaItem.metadata!!,
@@ -1089,7 +1090,7 @@ fun Queue(
                             }
                         }
 
-                        if (locked) {
+                        if (locked || roundInsets.isRound) {
                             content()
                         } else {
                             SwipeToDismissBox(
@@ -1108,7 +1109,7 @@ fun Queue(
                             modifier =
                                 Modifier
                                     .padding(vertical = 8.dp, horizontal = 4.dp)
-                                    .animateItem(),
+                                    .then(if (roundInsets.isRound) Modifier else Modifier.animateItem()),
                         )
 
                         Text(
@@ -1178,7 +1179,7 @@ fun Queue(
                                                     )
                                                 }
                                             },
-                                        ).animateItem(),
+                                        ).then(if (roundInsets.isRound) Modifier else Modifier.animateItem()),
                             )
                         }
                     }

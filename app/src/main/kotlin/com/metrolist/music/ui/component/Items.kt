@@ -533,6 +533,7 @@ fun ArtistListItem(
                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
+                .size(256, 256)
                 .build(),
             contentDescription = null,
             modifier = Modifier
@@ -565,6 +566,7 @@ fun ArtistGridItem(
                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
+                .size(256, 256)
                 .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
@@ -1398,6 +1400,7 @@ fun LocalThumbnail(
                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
+                .size(256, 256)
                 .build(),
             contentDescription = null,
             contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
@@ -1509,6 +1512,7 @@ fun PlaylistThumbnail(
                 .memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .diskCachePolicy(coil3.request.CachePolicy.ENABLED)
                 .networkCachePolicy(coil3.request.CachePolicy.ENABLED)
+                .size(256, 256)
                 .build(),
             contentDescription = null,
             contentScale = if (cropAlbumArt) ContentScale.Crop else ContentScale.Fit,
