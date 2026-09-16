@@ -9,7 +9,7 @@ on:
       - .github/workflows/baseline_profile.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
@@ -195,3 +195,26 @@ jobs:
         with:
           name: baseline-profile
           path: out/
+
+      - name: Check out branch
+        uses: actions/checkout@v6
+        with:
+          ref: arena/01a09e33-meld-watchos
+          fetch-depth: 0
+
+      - name: Commit generated profile to branch
+        run: |
+          if [ ! -d out/app ]; then
+            echo "::error::no generated profile to commit"
+            exit 1
+          fi
+          cp -r out/app/. app/
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/src
+          if git diff --cached --quiet; then
+            echo "profile unchanged"
+          else
+            git commit -m "chore(baseline): add generated baseline profile"
+            git push origin HEAD:arena/01a09e33-meld-watchos
+          fi
