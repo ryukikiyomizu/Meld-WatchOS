@@ -41,11 +41,13 @@ jobs:
         run: chmod +x gradlew
 
       - name: Report KVM availability
-        run: ls -la /dev/kvm || echo "::warning::no /dev/kvm on this runner"
+        run: |
+          if [ -e /dev/kvm ]; then echo "::notice::KVM present"; ls -la /dev/kvm; else echo "::error::NO /dev/kvm on this runner"; fi
 
       - name: Generate baseline profile on an emulator
         uses: reactivecircus/android-emulator-runner@v2.32.0
         with:
+          avd-name: bp2
           api-level: 33
           target: aosp_atd
           arch: x86_64
