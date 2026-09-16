@@ -217,8 +217,11 @@ jobs:
             exit 1
           fi
           mkdir -p app/src/main/baselineProfiles
-          find out -name "baseline-prof.txt" -exec cp {} app/src/main/baselineProfiles/baseline-prof.txt \;
-          find out -name "startup-prof.txt" -exec cp {} app/src/main/baselineProfiles/startup-prof.txt \;
+          for n in baseline-prof.txt startup-prof.txt; do
+            FIRST=$(find out -name "$n" | head -1)
+            if [ -n "$FIRST" ]; then cp "$FIRST" "app/src/main/baselineProfiles/$n"; fi
+          done
+          wc -l app/src/main/baselineProfiles/*.txt
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app/src/main/baselineProfiles
