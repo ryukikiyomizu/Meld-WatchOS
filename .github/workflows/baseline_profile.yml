@@ -57,15 +57,17 @@ jobs:
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
-            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1 || true
+            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1
+            cp /tmp/bp.log bp.log
+        continue-on-error: true
 
       - name: Check generation result
         run: |
-          if grep -q "BUILD SUCCESSFUL" /tmp/bp.log; then
+          if grep -q "BUILD SUCCESSFUL" bp.log; then
             echo "generation ok"
           else
-            echo "::error::$(grep -aE 'What went wrong|Caused by|FAILED' /tmp/bp.log | head -8 | tr -d '\r' | tr '\n' '|')"
-            echo "::error::$(tail -c 900 /tmp/bp.log | tr -d '\r' | tr '\n' '|')"
+            echo "::error::$(grep -aE 'What went wrong|Caused by|FAILED' bp.log | head -8 | tr -d '\r' | tr '\n' '|')"
+            echo "::error::$(tail -c 900 bp.log | tr -d '\r' | tr '\n' '|')"
             exit 1
           fi
 
