@@ -68,6 +68,13 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew --console=plain assembleFossPreview -x lint -x lintFossPreview --warning-mode summary 2>&1 | tee /tmp/gradle_build.log
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: /tmp/gradle_build.log
         env:
           METROLIST_APPLICATION_ID: com.meld.app
           METROLIST_APP_NAME: Meld
