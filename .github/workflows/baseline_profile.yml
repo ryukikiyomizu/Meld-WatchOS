@@ -78,12 +78,9 @@ jobs:
             echo "AVD booted"
           ) > /tmp/boot.log 2>&1 || true
           if ! grep -q "AVD booted" /tmp/boot.log; then
-            echo "::error::--- boot.log ---"
-            tail -n 30 /tmp/boot.log | tr -d '\r' | sed 's/^/::error::/'
-            echo "::error::--- emulator log ---"
-            tail -n 40 /tmp/emu.log | tr -d '\r' | sed 's/^/::error::/'
-            echo "::error::--- adb devices ---"
-            adb devices | tr -d '\r' | sed 's/^/::error::/' || true
+            echo "::error::EMU-LOG: $(tail -c 900 /tmp/emu.log | tr -d '\r' | tr '\n' '|')"
+            echo "::error::ADB: $(adb devices | tr -d '\r' | tr '\n' '|')"
+            echo "::error::BOOT-TAIL: $(tail -c 400 /tmp/boot.log | tr -d '\r' | tr '\n' '|')"
             exit 1
           fi
           echo "AVD ready"
