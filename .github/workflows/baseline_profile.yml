@@ -156,14 +156,17 @@ jobs:
             exit 1
           fi
 
+      - name: Show profile files
+        if: success()
+        run: echo "::notice::LEG-FILES: $(find app/src -name '*prof*' -o -name '*baseline*' | tr '\n' '|')"
+
       - name: Upload generated profile
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: baseline-profile-${{ matrix.leg }}
-          path: |
-            app/src/**/baselineProfiles/**
-            app/src/**/baseline-prof.txt
+          path: app/src/
+          if-no-files-found: error
 
   result:
     name: Baseline profile generated
@@ -181,10 +184,9 @@ jobs:
 
       - name: Require a profile
         run: |
-          find out -type f | head -20
-          if find out -name "baseline-prof.txt" -o -name "*.txt" | grep -q .; then
+          echo "::notice::FULL-OUT: $(find out 2>&1 | tr '\n' '|')"
+          if find out -name "baseline-prof.txt" | grep -q .; then
             echo "profile produced"
-            find out -type f -exec wc -c {} +
           else
             echo "::error::no baseline profile was generated on any leg"
             exit 1
