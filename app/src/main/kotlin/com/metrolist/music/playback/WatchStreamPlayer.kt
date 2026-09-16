@@ -113,7 +113,7 @@ object WatchStreamPlayer {
             input =
                 StreamBridge.audioInput
                     ?: throw IOException("WatchStreamPlayer: no stream from phone yet")
-            return C.LENGTH_UNSET
+            return C.LENGTH_UNSET.toLong()
         }
 
         override fun read(

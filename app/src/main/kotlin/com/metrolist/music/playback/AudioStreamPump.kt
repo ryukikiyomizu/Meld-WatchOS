@@ -9,7 +9,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import androidx.media3.common.Player
 import com.google.android.gms.tasks.Tasks
-import com.google.android.gms.wearable.Channel
+import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
 import com.metrolist.music.constants.AudioOutputKey
 import com.metrolist.music.constants.AudioQuality
@@ -39,7 +39,7 @@ object AudioStreamPump {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var pumpJob: Job? = null
-    private var channel: Channel? = null
+    private var channel: ChannelClient.Channel? = null
     private var activeVideoId: String? = null
     private var playerListener: Player.Listener? = null
 
