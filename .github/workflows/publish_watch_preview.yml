@@ -67,7 +67,7 @@ jobs:
       - name: Build FOSS Debug APK (no lint, no tests)
         run: |
           set -o pipefail
-          ./gradlew --console=plain assembleFossPreview -x lint -x lintFossPreview --warning-mode summary 2>&1 | tee /tmp/gradle_build.log
+          ./gradlew --console=plain assembleFossPreview -x lint -x lintFossPreview --warning-mode summary --stacktrace 2>&1 | tee /tmp/gradle_build.log
 
       - name: Upload build log on failure
         if: failure()
@@ -87,12 +87,9 @@ jobs:
       - name: Surface build errors
         if: failure()
         run: |
+          echo "::notice::log exists: $(test -f /tmp/gradle_build.log && echo yes || echo no), size: $(wc -c < /tmp/gradle_build.log 2>/dev/null || echo 0)"
           if [ -f /tmp/gradle_build.log ]; then
-            grep -aE "^e: |error:|FAILED$|What went wrong" /tmp/gradle_build.log | tail -20 | while IFS= read -r line; do
-              echo "::error::${line}"
-            done
-            echo "::notice::--- raw tail of gradle log ---"
-            tail -80 /tmp/gradle_build.log | tr -d '\r' | while IFS= read -r line; do
+            { grep -aE "What went wrong|Caused by|^e: |error:|not found|FAILED" /tmp/gradle_build.log | head -12; echo "---tail---"; tail -25 /tmp/gradle_build.log; } | tr -d '\r' | while IFS= read -r line; do
               echo "::error::${line}"
             done
           fi
