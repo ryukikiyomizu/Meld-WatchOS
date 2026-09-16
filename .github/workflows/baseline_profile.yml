@@ -2,6 +2,11 @@ name: Generate Baseline Profile
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - arena/01a09e33-meld-watchos
+    paths:
+      - .github/workflows/baseline_profile.yml
 
 permissions:
   contents: read
@@ -10,7 +15,7 @@ jobs:
   generate:
     name: Generate baseline profile (fossPreview)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v6
