@@ -178,6 +178,13 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Check out branch
+        uses: actions/checkout@v6
+        with:
+          ref: arena/01a09e33-meld-watchos
+          fetch-depth: 0
+          clean: false
+
       - name: Download any generated profile
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -201,13 +208,6 @@ jobs:
         with:
           name: baseline-profile
           path: out/
-
-      - name: Check out branch
-        uses: actions/checkout@v6
-        with:
-          ref: arena/01a09e33-meld-watchos
-          fetch-depth: 0
-          clean: false
 
       - name: Commit generated profile to branch
         run: |
