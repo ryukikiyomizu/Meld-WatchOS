@@ -58,6 +58,7 @@ jobs:
 
       - name: Boot AVD (up to 3 attempts)
         run: |
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
           EMULATOR="$ANDROID_HOME/emulator/emulator"
           AVDDIR="$HOME/.android/avd"
           IMG="system-images/android-33/aosp_atd/x86_64"
@@ -107,7 +108,7 @@ jobs:
           tag.id=aosp_atd
           EOF
             sed -i 's/^          //' "$AVDDIR/bp.ini" "$AVDDIR/bp.avd/config.ini"
-            stdbuf -oL -eL "$EMULATOR" -avd bp -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot > "/tmp/emu$attempt.log" 2>&1 &
+            "$EMULATOR" -avd bp -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot > "/tmp/emu$attempt.log" 2>&1 &
             EMUPID=$!
             timeout 240 adb wait-for-device || echo "wait-for-device timed out"
             ok=0
@@ -137,6 +138,7 @@ jobs:
 
       - name: Generate baseline profile
         run: |
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
           ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1 || true
           cp /tmp/bp.log bp.log
           if grep -q "BUILD SUCCESSFUL" bp.log; then
