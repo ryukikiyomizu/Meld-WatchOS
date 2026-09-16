@@ -57,12 +57,11 @@ jobs:
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
-            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1 || true
-            cp /tmp/bp.log bp.log
-        continue-on-error: true
+            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace 2>&1 | tee /tmp/bp.log
 
       - name: Check generation result
         run: |
+          cp /tmp/bp.log bp.log || true
           if grep -q "BUILD SUCCESSFUL" bp.log; then
             echo "generation ok"
           else
