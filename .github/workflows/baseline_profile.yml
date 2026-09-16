@@ -161,15 +161,16 @@ jobs:
         run: |
           mkdir -p bp-out
           find app/src -path '*generated/baselineProfiles*' -name '*.txt' -exec cp {} bp-out/ \;
+          wc -l bp-out/*.txt
+          cd bp-out && zip -q profile.zip *.txt && cd ..
           echo "::notice::LEG-STAGED: $(ls -la bp-out | tr '\n' '|')"
-          wc -c bp-out/*.txt
 
       - name: Upload generated profile
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: baseline-profile-${{ matrix.leg }}
-          path: bp-out/
+          path: bp-out/profile.zip
           if-no-files-found: error
 
   result:
@@ -196,12 +197,14 @@ jobs:
       - name: Require a profile
         run: |
           echo "::notice::FULL-OUT: $(find out 2>&1 | tr '\n' '|')"
-          if find out -name "baseline-prof.txt" | grep -q .; then
-            echo "profile produced"
-          else
+          rm -rf profx && mkdir -p profx
+          FIRST=$(find out -name "profile.zip" | head -1)
+          if [ -z "$FIRST" ]; then
             echo "::error::no baseline profile was generated on any leg"
             exit 1
           fi
+          unzip -o "$FIRST" -d profx
+          echo "profile produced: $(wc -l profx/*.txt)"
 
       - name: Upload merged profile
         uses: actions/upload-artifact@v4
@@ -217,10 +220,7 @@ jobs:
             exit 1
           fi
           mkdir -p app/src/main/baselineProfiles
-          for n in baseline-prof.txt startup-prof.txt; do
-            FIRST=$(find out -name "$n" | head -1)
-            if [ -n "$FIRST" ]; then cp "$FIRST" "app/src/main/baselineProfiles/$n"; fi
-          done
+          cp profx/*.txt app/src/main/baselineProfiles/
           wc -l app/src/main/baselineProfiles/*.txt
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
