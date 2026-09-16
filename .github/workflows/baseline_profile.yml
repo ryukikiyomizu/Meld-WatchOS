@@ -207,6 +207,7 @@ jobs:
         with:
           ref: arena/01a09e33-meld-watchos
           fetch-depth: 0
+          clean: false
 
       - name: Commit generated profile to branch
         run: |
