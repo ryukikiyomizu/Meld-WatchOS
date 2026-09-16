@@ -19,7 +19,6 @@ val workflowDebugKeystoreFile = debugKeystorePathOverride?.let(::file)
 
 plugins {
     id("com.android.application")
-    id("androidx.baselineprofile")
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
@@ -247,8 +246,6 @@ configurations.configureEach {
 }
 
 dependencies {
-    baselineProfile(project(":baselineprofile"))
-    implementation(libs.androidx.profileinstaller)
     implementation(libs.play.services.wearable)
     implementation(libs.wear.compose.material3)
     implementation(libs.wear.compose.foundation)
