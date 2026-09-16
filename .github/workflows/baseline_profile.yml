@@ -158,7 +158,8 @@ jobs:
 
       - name: Show profile files
         if: success()
-        run: echo "::notice::LEG-FILES: $(find app/src -name '*prof*' -o -name '*baseline*' | tr '\n' '|')"
+        run: |
+          echo "::notice::LEG-FILES: $(find app/src -name '*prof*' -o -name '*baseline*' | tr '\n' '|')"
 
       - name: Upload generated profile
         if: success()
