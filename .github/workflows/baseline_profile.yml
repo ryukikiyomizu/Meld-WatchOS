@@ -53,25 +53,36 @@ jobs:
 
       - name: Create and boot AVD
         run: |
-          echo "no" | "$ANDROID_HOME"/cmdline-tools/latest/bin/avdmanager create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" -d pixel_6 --force
-          "$ANDROID_HOME"/emulator/emulator -avd bp -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot > /tmp/emu.log 2>&1 &
-          adb wait-for-device
-          ok=0
-          i=0
-          while [ $i -lt 60 ]; do
-            b=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-            if [ "$b" = "1" ]; then ok=1; break; fi
-            i=$((i+1))
-            sleep 10
-          done
-          if [ "$ok" != "1" ]; then
-            tail -n 30 /tmp/emu.log | tr -d '\r' | sed 's/^/::error::/'
-            exit 1
+          (
+            set -x
+            AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+            EMULATOR="$ANDROID_HOME/emulator/emulator"
+            ls -la "$ANDROID_HOME/cmdline-tools/latest/bin" | head -8
+            [ -x "$AVDMANAGER" ] || { echo "avdmanager missing"; exit 127; }
+            [ -x "$EMULATOR" ] || { echo "emulator missing"; ls "$ANDROID_HOME"; exit 127; }
+            echo "no" | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" -d pixel_6 --force
+            "$EMULATOR" -avd bp -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot &
+            adb wait-for-device
+            ok=0
+            i=0
+            while [ $i -lt 60 ]; do
+              b=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+              if [ "$b" = "1" ]; then ok=1; break; fi
+              i=$((i+1))
+              sleep 10
+            done
+            [ "$ok" = "1" ] || { echo "boot timeout"; exit 1; }
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            echo "AVD booted"
+          ) > /tmp/boot.log 2>&1
+          rc=$?
+          if [ "$rc" != "0" ]; then
+            tail -n 50 /tmp/boot.log | tr -d '\r' | sed 's/^/::error::/'
+            exit "$rc"
           fi
-          adb shell settings put global window_animation_scale 0
-          adb shell settings put global transition_animation_scale 0
-          adb shell settings put global animator_duration_scale 0
-          echo "AVD booted"
+          echo "AVD ready"
 
       - name: Generate baseline profile
         run: |
