@@ -69,9 +69,14 @@ jobs:
             adb kill-server > /dev/null 2>&1 || true
             adb start-server > /dev/null 2>&1 || true
             rm -rf "$HOME/.android/avd/bp.avd" "$HOME/.android/avd/bp.ini"
-            echo "no" | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" --force > "/tmp/avd$attempt.log" 2>&1 || true
+            if [ "${{ matrix.leg }}" = "a" ]; then
+              yes no | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" -d pixel_6 --force > "/tmp/avd$attempt.log" 2>&1 || true
+            else
+              yes no | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" --force > "/tmp/avd$attempt.log" 2>&1 || true
+            fi
             if [ ! -f "$HOME/.android/avd/bp.ini" ]; then
-              echo "::error::AVD-CREATE failed: $(tail -c 400 /tmp/avd$attempt.log | tr -d '\r' | tr '\n' '|')"
+              echo "::error::AVD-CREATE failed: $(tail -c 600 /tmp/avd$attempt.log | tr -d '\r' | tr '\n' '|')"
+              echo "::error::AVD-DIR: $(ls -la "$HOME/.android/avd" 2>/dev/null | tr '\n' '|')"
             fi
             "$EMULATOR" -avd bp -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot > "/tmp/emu$attempt.log" 2>&1 &
             EMUPID=$!
