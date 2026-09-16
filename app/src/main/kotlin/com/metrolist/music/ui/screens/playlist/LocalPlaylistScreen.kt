@@ -144,6 +144,7 @@ import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberEnumPreference
+import com.metrolist.music.utils.rememberWatchLazyListState
 import com.metrolist.music.utils.rememberRoundScreenInsets
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.reportException
@@ -421,7 +422,7 @@ fun LocalPlaylistScreen(
     }
 
     val headerItems = 2
-    val lazyListState = rememberLazyListState()
+    val lazyListState = rememberWatchLazyListState()
     var dragInfo by remember {
         mutableStateOf<Pair<Int, Int>?>(null)
     }

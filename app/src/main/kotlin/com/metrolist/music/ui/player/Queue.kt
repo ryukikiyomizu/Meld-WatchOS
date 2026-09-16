@@ -127,6 +127,7 @@ import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.listMarquee
+import com.metrolist.music.utils.rememberWatchLazyListState
 import com.metrolist.music.utils.rememberRoundScreenInsets
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -825,7 +826,7 @@ fun Queue(
         val coroutineScope = rememberCoroutineScope()
 
         val headerItems = 1
-        val lazyListState = rememberLazyListState()
+        val lazyListState = rememberWatchLazyListState()
         var dragInfo by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
         val currentPlayingUid =

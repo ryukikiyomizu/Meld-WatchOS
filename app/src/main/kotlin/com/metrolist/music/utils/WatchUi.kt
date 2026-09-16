@@ -9,6 +9,10 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.util.DisplayMetrics
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
@@ -116,6 +120,28 @@ fun Modifier.listMarquee(): Modifier =
     } else {
         this.basicMarquee()
     }
+
+/**
+ * Lazy-list state tuned for round watch screens: a wider cache window
+ * pre-composes items ahead and keeps items behind, so fast scrolls never
+ * wait on composition. Phones keep the stock behaviour.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun rememberWatchLazyListState(initialFirstVisibleItemIndex: Int = 0): LazyListState {
+    val isRound = LocalConfiguration.current.isScreenRound
+    return if (isRound) {
+        rememberLazyListState(
+            cacheWindow =
+                remember {
+                    LazyLayoutCacheWindow(ahead = 600.dp, behind = 300.dp)
+                },
+            initialFirstVisibleItemIndex = initialFirstVisibleItemIndex,
+        )
+    } else {
+        rememberLazyListState(initialFirstVisibleItemIndex = initialFirstVisibleItemIndex)
+    }
+}
 
 @Composable
 fun rememberRoundScreenInsets(): RoundScreenInsets {
