@@ -40,59 +40,30 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Install emulator + AOSP ATD image
-        run: |
-          yes | "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager "system-images;android-33;aosp_atd;x86_64" "platform-tools" "emulator"
-
-      - name: Create and boot AVD
-        run: |
-          (
-            set -x
-            AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
-            EMULATOR="$ANDROID_HOME/emulator/emulator"
-            ls -la "$ANDROID_HOME/cmdline-tools/latest/bin" | head -8
-            [ -x "$AVDMANAGER" ] || { echo "avdmanager missing"; exit 127; }
-            [ -x "$EMULATOR" ] || { echo "emulator missing"; ls "$ANDROID_HOME"; exit 127; }
-            echo "no" | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" -d pixel_6 --force
-            "$EMULATOR" -avd bp -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot &
+      - name: Generate baseline profile on an emulator
+        uses: reactivecircus/android-emulator-runner@v2.32.0
+        with:
+          api-level: 33
+          target: aosp_atd
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot
+          script: |
             adb wait-for-device
-            ok=0
-            i=0
-            while [ $i -lt 60 ]; do
-              b=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-              if [ "$b" = "1" ]; then ok=1; break; fi
-              i=$((i+1))
-              sleep 10
-            done
-            [ "$ok" = "1" ] || { echo "boot timeout"; exit 1; }
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
-            echo "AVD booted"
-          ) > /tmp/boot.log 2>&1 || true
-          if ! grep -q "AVD booted" /tmp/boot.log; then
-            echo "::error::EMU-LOG: $(tail -c 900 /tmp/emu.log | tr -d '\r' | tr '\n' '|')"
-            echo "::error::ADB: $(adb devices | tr -d '\r' | tr '\n' '|')"
-            echo "::error::BOOT-TAIL: $(tail -c 400 /tmp/boot.log | tr -d '\r' | tr '\n' '|')"
-            exit 1
-          fi
-          echo "AVD ready"
+            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1 || true
 
-      - name: Generate baseline profile
+      - name: Check generation result
         run: |
-          ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1
-          rc=$?
-          tail -n 60 /tmp/bp.log
-          if [ "$rc" != "0" ]; then
-            grep -aE "Caused by|What went wrong|FAILED|error" /tmp/bp.log | head -15 | tr -d '\r' | sed 's/^/::error::/'
-            exit "$rc"
+          if grep -q "BUILD SUCCESSFUL" /tmp/bp.log; then
+            echo "generation ok"
+          else
+            echo "::error::$(grep -aE 'What went wrong|Caused by|FAILED' /tmp/bp.log | head -8 | tr -d '\r' | tr '\n' '|')"
+            echo "::error::$(tail -c 900 /tmp/bp.log | tr -d '\r' | tr '\n' '|')"
+            exit 1
           fi
 
       - name: Show generated profile
