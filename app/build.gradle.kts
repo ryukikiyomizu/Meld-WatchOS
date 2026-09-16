@@ -100,11 +100,31 @@ android {
             enableV3Signing = true
             keyPassword = debugKeyPassword
         }
+        create("previewRelease") {
+            storeFile = file("watch-preview.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
         create("release") {
             storeFile = file("keystore/release.keystore")
             storePassword = System.getenv("STORE_PASSWORD")
             keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
+        }
+        create("preview") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            val previewKs = file("watch-preview.keystore")
+            signingConfig =
+                if (previewKs.exists()) {
+                    signingConfigs.getByName("previewRelease")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
         getByName("debug") {
             keyAlias = "androiddebugkey"

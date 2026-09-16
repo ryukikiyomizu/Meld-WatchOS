@@ -67,7 +67,7 @@ jobs:
       - name: Build FOSS Debug APK (no lint, no tests)
         run: |
           set -o pipefail
-          ./gradlew --console=plain assembleFossDebug -x lint -x lintFossDebug --warning-mode summary 2>&1 | tee /tmp/gradle_build.log
+          ./gradlew --console=plain assembleFossPreview -x lint -x lintFossPreview --warning-mode summary 2>&1 | tee /tmp/gradle_build.log
         env:
           METROLIST_APPLICATION_ID: com.meld.app
           METROLIST_APP_NAME: Meld
@@ -94,7 +94,7 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p out
-          find app/build/outputs/apk/foss/debug -name "*.apk" | head -1 | xargs -I{} cp {} out/meld-watchos-preview.apk
+          find app/build/outputs/apk/foss/preview -name "*.apk" | head -1 | xargs -I{} cp {} out/meld-watchos-preview.apk
           cp out/meld-watchos-preview.apk out/meld-android-preview.apk
           ls -la out/
 
