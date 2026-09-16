@@ -204,14 +204,17 @@ jobs:
 
       - name: Commit generated profile to branch
         run: |
-          if [ ! -d out/app ]; then
+          echo "::notice::OUT-TREE: $(find out -type f | tr '\n' '|')"
+          PROF=$(find out -name "baseline-prof.txt" | head -1)
+          if [ -z "$PROF" ]; then
             echo "::error::no generated profile to commit"
             exit 1
           fi
-          cp -r out/app/. app/
+          mkdir -p app/src/main/baselineProfiles
+          cp "$PROF" app/src/main/baselineProfiles/baseline-prof.txt
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/src
+          git add app/src/main/baselineProfiles
           if git diff --cached --quiet; then
             echo "profile unchanged"
           else
