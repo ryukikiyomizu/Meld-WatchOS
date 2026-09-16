@@ -148,6 +148,7 @@ android {
         }
         create("preview") {
             initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
         }
         debug {
             if (applicationIdOverride == null) {
