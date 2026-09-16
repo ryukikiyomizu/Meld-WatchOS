@@ -76,11 +76,10 @@ jobs:
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
             echo "AVD booted"
-          ) > /tmp/boot.log 2>&1
-          rc=$?
-          if [ "$rc" != "0" ]; then
+          ) > /tmp/boot.log 2>&1 || true
+          if ! grep -q "AVD booted" /tmp/boot.log; then
             tail -n 50 /tmp/boot.log | tr -d '\r' | sed 's/^/::error::/'
-            exit "$rc"
+            exit 1
           fi
           echo "AVD ready"
 
