@@ -57,7 +57,7 @@ jobs:
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
-            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1
+            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1 || true
             cp /tmp/bp.log bp.log
         continue-on-error: true
 
