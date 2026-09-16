@@ -58,8 +58,9 @@ jobs:
 
       - name: Boot AVD (up to 3 attempts)
         run: |
-          AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
           EMULATOR="$ANDROID_HOME/emulator/emulator"
+          AVDDIR="$HOME/.android/avd"
+          IMG="system-images/android-33/aosp_atd/x86_64"
           booted=0
           attempt=1
           while [ "$attempt" -le 3 ]; do
@@ -68,16 +69,44 @@ jobs:
             sleep 3
             adb kill-server > /dev/null 2>&1 || true
             adb start-server > /dev/null 2>&1 || true
-            rm -rf "$HOME/.android/avd/bp.avd" "$HOME/.android/avd/bp.ini"
-            if [ "${{ matrix.leg }}" = "a" ]; then
-              printf 'no\n' | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" -d pixel_6 --force > "/tmp/avd$attempt.log" 2>&1 || true
-            else
-              printf 'no\n' | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" --force > "/tmp/avd$attempt.log" 2>&1 || true
-            fi
-            if [ ! -f "$HOME/.android/avd/bp.ini" ]; then
-              echo "::error::AVD-CREATE failed: $(tail -c 600 /tmp/avd$attempt.log | tr -d '\r' | tr '\n' '|')"
-              echo "::error::AVD-DIR: $(ls -la "$HOME/.android/avd" 2>/dev/null | tr '\n' '|')"
-            fi
+            rm -rf "$AVDDIR/bp.avd" "$AVDDIR/bp.ini"
+            mkdir -p "$AVDDIR/bp.avd"
+            cat > "$AVDDIR/bp.ini" <<EOF
+          avd.ini.encoding=UTF-8
+          path=$AVDDIR/bp.avd
+          path.rel=avd/bp.avd
+          target=android-33
+          EOF
+            cat > "$AVDDIR/bp.avd/config.ini" <<EOF
+          AvdId=bp
+          PlayStore.enabled=false
+          abi.type=x86_64
+          avd.ini.displayname=bp
+          avd.ini.encoding=UTF-8
+          disk.dataPartition.size=6442450944
+          hw.audioInput=no
+          hw.audioOutput=no
+          hw.battery=yes
+          hw.cpu.arch=x86_64
+          hw.cpu.ncore=4
+          hw.dPad=no
+          hw.gpu.enabled=yes
+          hw.gpu.mode=swiftshader_indirect
+          hw.initialOrientation=Portrait
+          hw.keyboard=yes
+          hw.lcd.density=240
+          hw.lcd.height=1920
+          hw.lcd.width=1080
+          hw.mainKeys=no
+          hw.ramSize=4096
+          hw.sdCard=no
+          image.sysdir.1=$IMG/
+          skin.name=1080x1920
+          skin.path=_no_skin
+          tag.display=Automated Test Device
+          tag.id=aosp_atd
+          EOF
+            sed -i 's/^          //' "$AVDDIR/bp.ini" "$AVDDIR/bp.avd/config.ini"
             "$EMULATOR" -avd bp -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot > "/tmp/emu$attempt.log" 2>&1 &
             EMUPID=$!
             timeout 240 adb wait-for-device || echo "wait-for-device timed out"
@@ -99,7 +128,7 @@ jobs:
           done
           if [ "$booted" != "1" ]; then
             echo "::error::AVD failed to boot after 3 attempts"
-            echo "::error::EMU-LOG: $(tail -c 800 /tmp/emu3.log 2>/dev/null | tr -d '\r' | tr '\n' '|')"
+            echo "::error::EMU-LOG: $(tail -c 900 /tmp/emu3.log 2>/dev/null | tr -d '\r' | tr '\n' '|')"
             exit 1
           fi
           adb shell settings put global window_animation_scale 0
