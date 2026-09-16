@@ -35,16 +35,21 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Install AOSP ATD system image for profile generation
-        run: |
-          yes | "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager "system-images;android-33;aosp_atd;x86_64"
-
-      - name: Generate baseline profile
-        run: |
-          ./gradlew --console=plain :app:generateFossPreviewBaselineProfile \
-            -Pandroid.testoptions.manageddevices.emulator.gpu="swiftshader_indirect" \
-            --stacktrace
+      - name: Generate baseline profile on an emulator
+        uses: reactivecircus/android-emulator-runner@v17
+        with:
+          api-level: 33
+          target: aosp_atd
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot
+          script: |
+            adb wait-for-device
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace
 
       - name: Show generated profile
         run: |

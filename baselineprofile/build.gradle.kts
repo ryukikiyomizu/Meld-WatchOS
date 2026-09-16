@@ -25,24 +25,11 @@ android {
 
     // The generator runs as its own instrumentation APK.
     experimentalProperties["android.experimental.self-instrumenting"] = true
-
-    testOptions {
-        managedDevices {
-            devices {
-                create("pixel6Api33") {
-                    device = "Pixel 6"
-                    apiLevel = 33
-                    systemImageSource = "aosp-atd"
-                }
-            }
-        }
-    }
 }
 
 baselineProfile {
-    managedDevices += "pixel6Api33"
-    useConnectedDevices = false
-    enableEmulatorDisplay = false
+    // CI boots the emulator itself (reactivecircus/android-emulator-runner).
+    useConnectedDevices = true
 }
 
 dependencies {
