@@ -114,11 +114,14 @@ jobs:
             i=0
             while [ "$i" -lt 60 ]; do
               b=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
-              if [ "$b" = "1" ]; then ok=1; break; fi
+              d=$(adb shell getprop dev.bootcomplete 2>/dev/null | tr -d '\r')
+              p=$(adb shell getprop init.svc.zygote 2>/dev/null | tr -d '\r')
+              if [ "$b" = "1" ] || [ "$d" = "1" ]; then ok=1; break; fi
               if ! kill -0 "$EMUPID" > /dev/null 2>&1; then echo "emulator process died"; break; fi
               i=$((i+1))
               sleep 10
             done
+            echo "boot-probe: sys=[$b] dev=[$d] zygote=[$p]"
             if [ "$ok" = "1" ]; then
               booted=1
               break
@@ -128,7 +131,8 @@ jobs:
           done
           if [ "$booted" != "1" ]; then
             echo "::error::AVD failed to boot after 3 attempts"
-            echo "::error::EMU-LOG: $(tail -c 900 /tmp/emu3.log 2>/dev/null | tr -d '\r' | tr '\n' '|')"
+            echo "::error::BOOT-PROPS: $(adb shell getprop 2>/dev/null | grep -ai boot | head -8 | tr -d '\r' | tr '\n' '|')"
+            echo "::error::EMU-LOG: $(tail -c 500 /tmp/emu3.log 2>/dev/null | tr -d '\r' | tr '\n' '|')"
             exit 1
           fi
           adb shell settings put global window_animation_scale 0
