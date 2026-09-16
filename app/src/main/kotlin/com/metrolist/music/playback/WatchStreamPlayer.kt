@@ -131,6 +131,10 @@ object WatchStreamPlayer {
             }
         }
 
+        override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
+            // No-op: bytes flow over the wearable channel, not a metered fetch.
+        }
+
         override fun close() {
             input = null
         }

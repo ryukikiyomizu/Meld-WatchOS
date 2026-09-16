@@ -7,6 +7,7 @@ package com.metrolist.music.playback
 
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.ChannelClient
+import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import timber.log.Timber
 
