@@ -70,9 +70,9 @@ jobs:
             adb start-server > /dev/null 2>&1 || true
             rm -rf "$HOME/.android/avd/bp.avd" "$HOME/.android/avd/bp.ini"
             if [ "${{ matrix.leg }}" = "a" ]; then
-              "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" -d pixel_6 --force > "/tmp/avd$attempt.log" 2>&1 < /dev/null || true
+              printf 'no\n' | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" -d pixel_6 --force > "/tmp/avd$attempt.log" 2>&1 || true
             else
-              "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" --force > "/tmp/avd$attempt.log" 2>&1 < /dev/null || true
+              printf 'no\n' | "$AVDMANAGER" create avd -n bp -k "system-images;android-33;aosp_atd;x86_64" --force > "/tmp/avd$attempt.log" 2>&1 || true
             fi
             if [ ! -f "$HOME/.android/avd/bp.ini" ]; then
               echo "::error::AVD-CREATE failed: $(tail -c 600 /tmp/avd$attempt.log | tr -d '\r' | tr '\n' '|')"
