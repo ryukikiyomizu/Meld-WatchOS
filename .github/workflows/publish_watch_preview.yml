@@ -1,0 +1,174 @@
+name: Publish Watch Preview APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/01a09e33-meld-watchos
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build and publish APK to release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Init metroproto submodule
+        run: git submodule update --init metroproto
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Set Up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-cleanup: on-success
+
+      - name: Setup and Generate Protobuf
+        uses: ./.github/actions/setup-protobuf
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Restore preview debug keystore
+        id: preview_keystore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/watch-preview.keystore
+          key: watch-preview-keystore
+
+      - name: Generate preview debug keystore if not cached
+        if: steps.preview_keystore.outputs.cache-hit != 'true'
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/watch-preview.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Meld Watch Preview,O=Meld,C=US"
+
+      - name: Save preview debug keystore
+        if: steps.preview_keystore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: app/watch-preview.keystore
+          key: ${{ steps.preview_keystore.outputs.cache-primary-key }}
+
+      - name: Show signing report
+        run: |
+          ./gradlew --console=plain :app:signingReport 2>&1 | grep -aA 8 -i "preview" | head -40 | tr -d '\r' | sed 's/^/::notice::SIGNREP: /' || true
+
+      - name: Build FOSS Preview APK (no lint, no tests)
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain assembleFossPreview -x lint -x lintFossPreview --warning-mode summary --stacktrace 2>&1 | tee /tmp/gradle_build.log
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: /tmp/gradle_build.log
+        env:
+          METROLIST_APPLICATION_ID: com.meld.app
+          METROLIST_APP_NAME: Meld
+          METROLIST_DEBUG_KEYSTORE_PATH: watch-preview.keystore
+          PULL_REQUEST: "false"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+
+      - name: Surface build errors
+        if: failure()
+        run: |
+          echo "::notice::log exists: $(test -f /tmp/gradle_build.log && echo yes || echo no), size: $(wc -c < /tmp/gradle_build.log 2>/dev/null || echo 0)"
+          if [ -f /tmp/gradle_build.log ]; then
+            { grep -aE "What went wrong|Caused by|^e: |error:|not found|FAILED" /tmp/gradle_build.log | head -12; echo "---tail---"; tail -25 /tmp/gradle_build.log; } | tr -d '\r' | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+          fi
+          exit 1
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          find app/build/outputs/apk/foss/preview -name "*.apk" | head -1 | xargs -I{} cp {} out/meld-watchos-preview.apk
+          cp out/meld-watchos-preview.apk out/meld-android-preview.apk
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" verify -v out/meld-watchos-preview.apk 2>&1 | grep -aE "Verifies|Verified using" | sed 's/^/::notice::RAW-SIGN: /'
+          ls -la out/
+
+      - name: Validate APK
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" verify --print-certs out/meld-watchos-preview.apk 2>&1 | sed 's/^/::notice::SIGN: /' || echo "::error::apksigner verify FAILED"
+          "$BT/aapt2" dump badging out/meld-watchos-preview.apk 2>&1 | grep -aE "^package:|^sdkVersion|^targetSdkVersion" | sed 's/^/::notice::BADGE: /'
+          unzip -l out/meld-watchos-preview.apk | grep -aE "classes[0-9]*\.dex|assets/dexopt|META-INF/.*\.(RSA|SF|MF)" | sed 's/^/::notice::ZIP: /'
+
+      - name: Upload APK to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="watchos-preview"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/meld-watchos-preview.apk out/meld-android-preview.apk --clobber
+            gh release edit "$TAG" \
+              --notes "Preview APK built from branch \`$GITHUB_REF_NAME\` (unmerged work — PR #1).
+          Commit: ${GITHUB_SHA:0:7}
+
+          Debug-signed build of the FOSS variant for testing on Wear OS watches.
+          Install with: adb install meld-watchos-preview.apk"
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --latest=false \
+              --title "Watch OS preview build (unmerged PR #1)" \
+              --notes "Preview APK built from branch \`$GITHUB_REF_NAME\` (unmerged work — PR #1).
+          Commit: ${GITHUB_SHA:0:7}
+
+          Debug-signed build of the FOSS variant for testing on Wear OS watches.
+          Install with: adb install meld-watchos-preview.apk" \
+              out/meld-watchos-preview.apk \
+              out/meld-android-preview.apk \
+             
+          fi
+          echo "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+
+  verify-release-asset:
+    name: Verify released APK
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download asset from release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in 1 2 3; do
+            gh release download watchos-preview -p meld-watchos-preview.apk -D /tmp/asset -R "$GITHUB_REPOSITORY" && break
+            sleep 10
+          done
+          ls -la /tmp/asset/
+
+      - name: Validate downloaded asset
+        run: |
+          echo "::notice::ASSET-SHA256: $(sha256sum /tmp/asset/meld-watchos-preview.apk | cut -d' ' -f1)"
+          echo "::notice::ASSET-SIZE: $(stat -c%s /tmp/asset/meld-watchos-preview.apk)"
+          unzip -tq /tmp/asset/meld-watchos-preview.apk > /dev/null && echo "::notice::ZIP-INTEGRITY: ok" || echo "::error::ZIP-INTEGRITY: CORRUPT"
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" verify -v /tmp/asset/meld-watchos-preview.apk 2>&1 | grep -aE "Verifies|Verified using|ERROR|WARNING|digest" | head -20 | sed 's/^/::notice::ASSET-VERIFY: /' || echo "::error::ASSET-VERIFY: FAILED"
+          jarsigner -verify -verbose:summary /tmp/asset/meld-watchos-preview.apk 2>&1 | head -8 | sed 's/^/::notice::JARSIGNER: /'
+          echo "::notice::SO-FILES: $(unzip -l /tmp/asset/meld-watchos-preview.apk | grep -a '\.so' | tr '\n' '|')"
+          echo "::notice::ARSC: $(unzip -v /tmp/asset/meld-watchos-preview.apk | grep -a 'resources.arsc' | tr -s ' ' | cut -d' ' -f2,3,8)"
+          AID=$(mktemp -d)
+          cd "$AID" && unzip -q /tmp/asset/meld-watchos-preview.apk META-INF/* && ls -la META-INF | sed 's/^/::notice::METAFILE: /'

@@ -1,0 +1,234 @@
+name: Generate Baseline Profile
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/01a09e33-meld-watchos
+    paths:
+      - .github/workflows/baseline_profile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    name: Generate baseline profile (${{ matrix.leg }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: [a, b]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Init metroproto submodule
+        run: git submodule update --init metroproto
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Set Up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-cleanup: on-success
+
+      - name: Setup and Generate Protobuf
+        uses: ./.github/actions/setup-protobuf
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Create debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          if [ -e /dev/kvm ]; then echo "KVM present"; else echo "::error::NO /dev/kvm on this runner"; fi
+
+      - name: Install emulator + AOSP ATD image
+        run: |
+          yes | "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager "system-images;android-33;aosp_atd;x86_64" "platform-tools" "emulator"
+
+      - name: Boot AVD (up to 3 attempts)
+        run: |
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          EMULATOR="$ANDROID_HOME/emulator/emulator"
+          AVDDIR="$HOME/.android/avd"
+          IMG="system-images/android-33/aosp_atd/x86_64"
+          booted=0
+          attempt=1
+          while [ "$attempt" -le 3 ]; do
+            echo "=== boot attempt $attempt ==="
+            pkill -f "qemu-system" > /dev/null 2>&1 || true
+            sleep 3
+            adb kill-server > /dev/null 2>&1 || true
+            adb start-server > /dev/null 2>&1 || true
+            rm -rf "$AVDDIR/bp.avd" "$AVDDIR/bp.ini"
+            mkdir -p "$AVDDIR/bp.avd"
+            cat > "$AVDDIR/bp.ini" <<EOF
+          avd.ini.encoding=UTF-8
+          path=$AVDDIR/bp.avd
+          path.rel=avd/bp.avd
+          target=android-33
+          EOF
+            cat > "$AVDDIR/bp.avd/config.ini" <<EOF
+          AvdId=bp
+          PlayStore.enabled=false
+          abi.type=x86_64
+          avd.ini.displayname=bp
+          avd.ini.encoding=UTF-8
+          disk.dataPartition.size=6442450944
+          hw.audioInput=no
+          hw.audioOutput=no
+          hw.battery=yes
+          hw.cpu.arch=x86_64
+          hw.cpu.ncore=4
+          hw.dPad=no
+          hw.gpu.enabled=yes
+          hw.gpu.mode=swiftshader_indirect
+          hw.initialOrientation=Portrait
+          hw.keyboard=yes
+          hw.lcd.density=240
+          hw.lcd.height=1920
+          hw.lcd.width=1080
+          hw.mainKeys=no
+          hw.ramSize=4096
+          hw.sdCard=no
+          image.sysdir.1=$IMG/
+          skin.name=1080x1920
+          skin.path=_no_skin
+          tag.display=Automated Test Device
+          tag.id=aosp_atd
+          EOF
+            sed -i 's/^          //' "$AVDDIR/bp.ini" "$AVDDIR/bp.avd/config.ini"
+            "$EMULATOR" -avd bp -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -no-snapshot > "/tmp/emu$attempt.log" 2>&1 &
+            EMUPID=$!
+            timeout 240 adb wait-for-device || echo "wait-for-device timed out"
+            ok=0
+            if timeout 600 adb shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'; then
+              ok=1
+            fi
+            RAW=$(adb shell getprop sys.boot_completed 2>&1 | od -c | head -3 | tr '\n' ' ')
+            echo "boot-probe: ok=$ok raw=[$RAW]"
+            if [ "$ok" = "1" ]; then
+              booted=1
+              break
+            fi
+            kill "$EMUPID" > /dev/null 2>&1 || true
+            attempt=$((attempt+1))
+          done
+          if [ "$booted" != "1" ]; then
+            echo "::error::AVD failed to boot after 3 attempts"
+            echo "::error::EMU-LOG3: $(tail -c 700 /tmp/emu3.log 2>/dev/null | tr -d '\r' | tr '\n' '|')"
+            echo "::error::EMU-LOG1: $(tail -c 700 /tmp/emu1.log 2>/dev/null | tr -d '\r' | tr '\n' '|')"
+            echo "::error::ADB-DEVICES: $(adb devices 2>&1 | tr '\n' '|')"
+            exit 1
+          fi
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          echo "AVD booted"
+
+      - name: Generate baseline profile
+        run: |
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+          ./gradlew --console=plain :app:generateFossPreviewBaselineProfile --stacktrace > /tmp/bp.log 2>&1 || true
+          cp /tmp/bp.log bp.log
+          if grep -q "BUILD SUCCESSFUL" bp.log; then
+            echo "generation ok"
+          else
+            echo "::error::$(grep -aE 'What went wrong|Caused by|FAILED' bp.log | head -6 | tr -d '\r' | tr '\n' '|')"
+            echo "::error::$(tail -c 900 bp.log | tr -d '\r' | tr '\n' '|')"
+            exit 1
+          fi
+
+      - name: Stage profile files
+        if: success()
+        run: |
+          mkdir -p bp-out
+          find app/src -path '*generated/baselineProfiles*' -name '*.txt' -exec cp {} bp-out/ \;
+          wc -l bp-out/*.txt
+          cd bp-out && zip -q profile.zip *.txt && cd ..
+          echo "::notice::LEG-STAGED: $(ls -la bp-out | tr '\n' '|')"
+
+      - name: Upload generated profile
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-profile-${{ matrix.leg }}
+          path: bp-out/profile.zip
+          if-no-files-found: error
+
+  result:
+    name: Baseline profile generated
+    needs: generate
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v6
+        with:
+          ref: arena/01a09e33-meld-watchos
+          fetch-depth: 0
+          clean: false
+
+      - name: Download any generated profile
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: baseline-profile-*
+          merge-multiple: true
+          path: out
+
+      - name: Require a profile
+        run: |
+          echo "::notice::FULL-OUT: $(find out 2>&1 | tr '\n' '|')"
+          rm -rf profx && mkdir -p profx
+          FIRST=$(find out -name "profile.zip" | head -1)
+          if [ -z "$FIRST" ]; then
+            echo "::error::no baseline profile was generated on any leg"
+            exit 1
+          fi
+          unzip -o "$FIRST" -d profx
+          echo "profile produced: $(wc -l profx/*.txt)"
+
+      - name: Upload merged profile
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-profile
+          path: out/
+
+      - name: Commit generated profile to branch
+        run: |
+          echo "::notice::OUT-TREE: $(find out -type f | tr '\n' '|')"
+          if ! find profx -name "*.txt" | grep -q .; then
+            echo "::error::no generated profile to commit"
+            exit 1
+          fi
+          mkdir -p app/src/main/baselineProfiles
+          cp profx/*.txt app/src/main/baselineProfiles/
+          wc -l app/src/main/baselineProfiles/*.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/baselineProfiles
+          echo "::notice::DEST: $(ls -la app/src/main/baselineProfiles | tr '\n' '|')" 
+          if git diff --cached --quiet; then
+            echo "profile unchanged"
+          else
+            git commit -m "chore(baseline): add generated baseline profile"
+            git push origin HEAD:arena/01a09e33-meld-watchos
+          fi

@@ -265,7 +265,7 @@ data class SearchSummaryPage(
                     val podcastIndex = if (isUnfilteredSearch) 2 else 1
 
                     EpisodeItem(
-                        id = renderer.playlistItemData?.videoId ?: return null,
+                        id = renderer.videoId ?: return null,
                         title =
                             renderer.flexColumns
                                 .firstOrNull()
@@ -325,7 +325,7 @@ data class SearchSummaryPage(
                     val listRun = (secondaryLine + thirdLine).clean()
 
                     SongItem(
-                        id = renderer.playlistItemData?.videoId ?: return null,
+                        id = renderer.videoId ?: return null,
                         title =
                             renderer.flexColumns
                                 .firstOrNull()

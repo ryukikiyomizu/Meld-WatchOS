@@ -141,9 +141,15 @@ fun AppNavigationBar(
     modifier: Modifier = Modifier,
     pureBlack: Boolean = false,
     slimNav: Boolean = false,
-    onSearchLongClick: (() -> Unit)? = null
+    onSearchLongClick: (() -> Unit)? = null,
+    transparentContainer: Boolean = false,
 ) {
-    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val containerColor =
+        when {
+            transparentContainer -> Color.Transparent
+            pureBlack -> Color.Black
+            else -> MaterialTheme.colorScheme.surfaceContainer
+        }
     val contentColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     val haptics = LocalHapticFeedback.current
     val viewConfiguration = LocalViewConfiguration.current

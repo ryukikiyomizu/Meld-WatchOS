@@ -26,6 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import com.metrolist.music.utils.rememberRoundScreenInsets
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.navigation.NavController
@@ -33,6 +36,12 @@ import com.metrolist.music.BuildConfig
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.ui.component.IconButton
+import com.metrolist.music.constants.MinimalModeKey
+import com.metrolist.music.utils.LinkSender
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import com.metrolist.music.utils.rememberPreference
+import androidx.compose.foundation.layout.size
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.ReleaseNotesCard
@@ -48,6 +57,22 @@ fun SettingsScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
+    val (minimalMode, onMinimalModeChange) = rememberPreference(MinimalModeKey, false)
+    val scope = rememberCoroutineScope()
+    val setMinimalMode: (Boolean) -> Unit = { on ->
+        scope.launch {
+            // Flip immediately so both devices' settings stay snappy; then
+            // verify the peer actually got the signal and revert if it didn't.
+            onMinimalModeChange(on)
+            val result = LinkSender.send(context, LinkSender.PATH_MINIMAL, if (on) "1" else "0")
+            if (on && result.wearableReady && result.nodesFound == 0) {
+                onMinimalModeChange(false)
+                android.widget.Toast
+                    .makeText(context, R.string.minimal_connect_required, android.widget.Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+    }
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val hasAndroidAuto = remember {
         try {
@@ -73,6 +98,36 @@ fun SettingsScreen(
                 )
             )
         )
+
+        // Minimal mode (watch <-> phone head-unit mode)
+        Material3SettingsGroup(
+            title = stringResource(R.string.minimal_mode),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.phone),
+                    title = { Text(stringResource(R.string.minimal_mode)) },
+                    description = { Text(stringResource(R.string.minimal_mode_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = minimalMode,
+                            onCheckedChange = { on -> setMinimalMode(on) },
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (minimalMode) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { setMinimalMode(!minimalMode) }
+                )
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // User Interface Section
         Material3SettingsGroup(
@@ -102,11 +157,6 @@ fun SettingsScreen(
                     title = { Text(stringResource(R.string.content)) },
                     onClick = { navController.navigate("settings/content") }
                 ),
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.translate),
-                    title = { Text(stringResource(R.string.ai_lyrics_translation)) },
-                    onClick = { navController.navigate("settings/ai") }
-                )
             )
         )
 
@@ -165,67 +215,6 @@ fun SettingsScreen(
         Material3SettingsGroup(
             title = stringResource(R.string.settings_section_system),
             items = buildList {
-                if (isAndroid12OrLater) {
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.link),
-                            title = { Text(stringResource(R.string.default_links)) },
-                            onClick = {
-                                try {
-                                    val intent = Intent(
-                                        Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS,
-                                        "package:${context.packageName}".toUri()
-                                    )
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    when (e) {
-                                        is ActivityNotFoundException -> {
-                                            Toast.makeText(
-                                                context,
-                                                R.string.open_app_settings_error,
-                                                Toast.LENGTH_LONG
-                                            ).show()
-                                        }
-
-                                        is SecurityException -> {
-                                            Toast.makeText(
-                                                context,
-                                                R.string.open_app_settings_error,
-                                                Toast.LENGTH_LONG
-                                            ).show()
-                                        }
-
-                                        else -> {
-                                            Toast.makeText(
-                                                context,
-                                                R.string.open_app_settings_error,
-                                                Toast.LENGTH_LONG
-                                            ).show()
-                                        }
-                                    }
-                                }
-                            }
-                        )
-                    )
-                }
-                if (BuildConfig.UPDATER_AVAILABLE) {
-                    add(
-                        Material3SettingsItem(
-                            icon = painterResource(R.drawable.update),
-                            title = { Text(stringResource(R.string.updater)) },
-                            onClick = { navController.navigate("settings/updater") }
-                        )
-                    )
-                }
-                val showChangelog = com.metrolist.music.LocalChangelogState.current
-                add(
-                    Material3SettingsItem(
-                        icon = painterResource(R.drawable.newspaper),
-                        title = { Text(stringResource(R.string.changelog)) },
-                        onClick = { showChangelog.value = true }
-                    )
-                )
                 add(
                     Material3SettingsItem(
                         icon = painterResource(R.drawable.info),
@@ -233,53 +222,33 @@ fun SettingsScreen(
                         onClick = { navController.navigate("settings/about") }
                     )
                 )
-                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME) {
-                    val releaseInfo = Updater.getCachedLatestRelease()
-                    val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
 
-                    if (downloadUrl != null) {
-                        add(
-                            Material3SettingsItem(
-                                icon = painterResource(R.drawable.update),
-                                title = { 
-                                    Text(
-                                        text = stringResource(R.string.new_version_available),
-                                    )
-                                },
-                                description = {
-                                    Text(
-                                        text = latestVersionName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                showBadge = true,
-                                onClick = { uriHandler.openUri(downloadUrl) }
-                            )
-                        )
-                    }
-                }
             }
         )
-    if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.VERSION_NAME) {
-            Spacer(modifier = Modifier.height(16.dp))
-            ReleaseNotesCard()
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
     }
 
+    val roundInsets = rememberRoundScreenInsets()
+
     TopAppBar(
-        title = { Text(stringResource(R.string.settings)) },
+        title = {
+            Text(
+                text = stringResource(R.string.settings),
+                textAlign = if (roundInsets.isRound) TextAlign.Center else TextAlign.Start,
+                modifier = if (roundInsets.isRound) Modifier.fillMaxWidth() else Modifier,
+            )
+        },
         navigationIcon = {
-            IconButton(
-                onClick = navController::navigateUp,
-                onLongClick = navController::backToMain
-            ) {
-                Icon(
-                    painterResource(R.drawable.arrow_back),
-                    contentDescription = null
-                )
+            if (!roundInsets.isRound) {
+                IconButton(
+                    onClick = navController::navigateUp,
+                    onLongClick = navController::backToMain
+                ) {
+                    Icon(
+                        painterResource(R.drawable.arrow_back),
+                        contentDescription = null
+                    )
+                }
             }
         }
     )

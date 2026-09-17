@@ -14,6 +14,7 @@ buildscript {
     dependencies {
         classpath(libs.gradle)
         classpath(kotlin("gradle-plugin", libs.versions.kotlin.get()))
+        classpath("androidx.baselineprofile:androidx.baselineprofile.gradle.plugin:1.5.0")
     }
 }
 

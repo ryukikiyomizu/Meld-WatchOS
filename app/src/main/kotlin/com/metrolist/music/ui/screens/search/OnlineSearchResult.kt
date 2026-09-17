@@ -73,7 +73,6 @@ import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_FEATURED_PL
 import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_PODCAST
 import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_PROFILE
 import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_SONG
-import com.metrolist.innertube.YouTube.SearchFilter.Companion.FILTER_VIDEO
 import com.metrolist.innertube.models.AlbumItem
 import com.metrolist.innertube.models.ArtistItem
 import com.metrolist.innertube.models.EpisodeItem
@@ -85,7 +84,6 @@ import com.metrolist.innertube.models.YTItem
 import com.metrolist.music.LocalDatabase
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
-import com.metrolist.music.constants.HideVideoSongsKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
 import com.metrolist.music.constants.MiniPlayerHeight
 import com.metrolist.music.constants.NavigationBarHeight
@@ -161,7 +159,6 @@ fun OnlineSearchResult(
     }
 
     val pauseSearchHistory by rememberPreference(PauseSearchHistoryKey, defaultValue = false)
-    val hideVideoSongs by rememberPreference(HideVideoSongsKey, defaultValue = false)
 
     BackHandler(enabled = isSearchFocused) {
         isSearchFocused = false
@@ -210,13 +207,6 @@ fun OnlineSearchResult(
     // Update query when decodedQuery changes
     LaunchedEffect(decodedQuery) {
         query = TextFieldValue(decodedQuery, TextRange(decodedQuery.length))
-    }
-
-    // Clear video filter if hideVideoSongs setting is enabled and filter is set to FILTER_VIDEO
-    LaunchedEffect(hideVideoSongs) {
-        if (hideVideoSongs && viewModel.filter.value == FILTER_VIDEO) {
-            viewModel.filter.value = null
-        }
     }
 
     val searchFilter by viewModel.filter.collectAsState()
@@ -525,13 +515,7 @@ fun OnlineSearchResult(
                 listOf(
                     null to stringResource(R.string.filter_all),
                     FILTER_SONG to stringResource(R.string.filter_songs),
-                ).let { baseChips ->
-                    if (!hideVideoSongs) {
-                        baseChips + (FILTER_VIDEO to stringResource(R.string.filter_videos))
-                    } else {
-                        baseChips
-                    }
-                } +
+                ) +
                 listOf(
                     FILTER_ALBUM to stringResource(R.string.filter_albums),
                     FILTER_ARTIST to stringResource(R.string.filter_artists),

@@ -436,6 +436,46 @@ fun AboutScreen(
     
             Spacer(Modifier.height(48.dp))
     
+            SectionHeader(stringResource(R.string.credits_porter))
+    
+            // Watch port developer
+            ContributorAvatar(
+                avatarUrl = "https://github.com/ryukikiyomizu.png",
+                sizeDp = 180,
+                shape = CircleShape,
+                contentDescription = "Ryuki",
+            )
+    
+            Spacer(Modifier.height(24.dp))
+    
+            Text(
+                text = "Ryuki",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+    
+            Spacer(Modifier.height(32.dp))
+    
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedActionButton(
+                        label = stringResource(R.string.credits_github),
+                        iconRes = R.drawable.github,
+                        iconSize = 24.dp,
+                        onClick = { uriHandler.openUri("https://github.com/ryukikiyomizu") }
+                    )
+                }
+            }
+    
+            Spacer(Modifier.height(48.dp))
+    
             SectionHeader(stringResource(R.string.credits_original_project))
     
             Text(

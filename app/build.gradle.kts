@@ -19,6 +19,7 @@ val workflowDebugKeystoreFile = debugKeystorePathOverride?.let(::file)
 
 plugins {
     id("com.android.application")
+    id("androidx.baselineprofile")
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.compose.compiler)
@@ -27,7 +28,7 @@ plugins {
 
 android {
     namespace = "com.metrolist.music"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = applicationIdOverride ?: "com.meld.app"
@@ -95,7 +96,27 @@ android {
             storeFile = workflowDebugKeystoreFile ?: persistentDebugKeystoreFile
             storePassword = debugKeystorePassword
             keyAlias = debugKeyAlias
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
             keyPassword = debugKeyPassword
+        }
+        create("preview") {
+            val previewKs = file("watch-preview.keystore")
+            if (previewKs.exists()) {
+                storeFile = previewKs
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            } else {
+                storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
         }
         create("release") {
             storeFile = file("keystore/release.keystore")
@@ -124,6 +145,11 @@ android {
             ndk {
                 debugSymbolLevel = "NONE"
             }
+        }
+        create("preview") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            signingConfig = signingConfigs.getByName("preview")
         }
         debug {
             if (applicationIdOverride == null) {
@@ -227,6 +253,12 @@ configurations.configureEach {
 }
 
 dependencies {
+    baselineProfile(project(":baselineprofile"))
+    implementation(libs.androidx.profileinstaller)
+    implementation(libs.play.services.wearable)
+    implementation(libs.wear.compose.material3)
+    implementation(libs.wear.compose.foundation)
+    implementation(libs.wear.tiles)
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)

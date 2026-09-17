@@ -9,6 +9,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
@@ -29,6 +30,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -177,7 +179,6 @@ import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.player.BottomSheetPlayer
 import com.metrolist.music.ui.screens.Screens
 import com.metrolist.music.ui.screens.navigationBuilder
-import com.metrolist.music.ui.screens.settings.ChangelogScreen
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.screens.settings.NavigationTab
 import com.metrolist.music.ui.theme.ColorSaver
@@ -193,10 +194,16 @@ import androidx.datastore.preferences.core.edit
 import com.metrolist.music.utils.get
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
+import com.metrolist.music.constants.AudioOutputKey
+import com.metrolist.music.constants.MinimalModeKey
+import com.metrolist.music.playback.PlaybackRemote
+import com.metrolist.music.utils.LinkSender
+import com.metrolist.music.utils.rememberRoundScreenInsets
 import com.metrolist.music.utils.reportException
 import com.metrolist.spotify.Spotify
 
 import com.metrolist.music.utils.setAppLocale
+import com.metrolist.music.utils.withWatchUiScale
 import com.metrolist.music.viewmodels.HomeViewModel
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -236,6 +243,16 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var listenTogetherManager: com.metrolist.music.listentogether.ListenTogetherManager
 
+    /**
+     * Scale down the display density before anything is inflated so the
+     * phone-oriented UI renders small enough to fit on a Wear OS watch
+     * display (e.g. 44mm). Applied here so it affects the activity window
+     * as well as Compose dialogs, popups and menus.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.withWatchUiScale())
+    }
+
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
@@ -259,6 +276,7 @@ class MainActivity : ComponentActivity() {
                     try {
                         playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                         playerConnectionSnapshot = playerConnection
+                            PlaybackRemote.playerConnection = playerConnection
                         Timber.tag("MainActivity").d("PlayerConnection created successfully")
                         // Connect Listen Together manager to player
                         listenTogetherManager.setPlayerConnection(playerConnection)
@@ -270,6 +288,7 @@ class MainActivity : ComponentActivity() {
                             try {
                                 playerConnection = PlayerConnection(this@MainActivity, service, database, lifecycleScope)
                                 playerConnectionSnapshot = playerConnection
+                            PlaybackRemote.playerConnection = playerConnection
                                 listenTogetherManager.setPlayerConnection(playerConnection)
                             } catch (e2: Exception) {
                                 Timber.tag("MainActivity").e(e2, "Failed to create PlayerConnection on retry")
@@ -370,6 +389,27 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Tile transport buttons: execute the playback command and exit
+        // immediately so the app never visibly opens.
+        val tileClickable = intent?.getStringExtra(androidx.wear.tiles.TileService.EXTRA_CLICKABLE_ID)
+        if (tileClickable != null) {
+            val cmd =
+                when (tileClickable) {
+                    "meld_tile_prev" -> "prev"
+                    "meld_tile_toggle" -> "toggle"
+                    "meld_tile_next" -> "next"
+                    else -> null
+                }
+            if (cmd != null) {
+                lifecycleScope.launch {
+                    LinkSender.send(applicationContext, LinkSender.PATH_PLAYBACK, cmd)
+                }
+            }
+            finish()
+            return
+        }
+
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -426,7 +466,7 @@ class MainActivity : ComponentActivity() {
     ) {
         val checkForUpdates by rememberPreference(CheckForUpdatesKey, defaultValue = true)
 
-        if (BuildConfig.UPDATER_AVAILABLE) {
+        if (false && BuildConfig.UPDATER_AVAILABLE) {
             LaunchedEffect(checkForUpdates) {
                 if (checkForUpdates) {
                     withContext(Dispatchers.IO) {
@@ -476,12 +516,15 @@ class MainActivity : ComponentActivity() {
 
         val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
         val enableHighRefreshRate by rememberPreference(EnableHighRefreshRateKey, defaultValue = true)
+        val refreshRateRoundInsets = rememberRoundScreenInsets()
 
         LaunchedEffect(enableHighRefreshRate) {
+            // Battery saver: high refresh rate buys nothing on watch displays.
+            val effectiveHighRefreshRate = if (refreshRateRoundInsets.isRound) false else enableHighRefreshRate
             val window = this@MainActivity.window
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val layoutParams = window.attributes
-                if (enableHighRefreshRate) {
+                if (effectiveHighRefreshRate) {
                     layoutParams.preferredDisplayModeId = 0
                 } else {
                     val modes = window.windowManager.defaultDisplay.supportedModes
@@ -496,7 +539,7 @@ class MainActivity : ComponentActivity() {
                 window.attributes = layoutParams
             } else {
                 val params = window.attributes
-                if (enableHighRefreshRate) {
+                if (effectiveHighRefreshRate) {
                     params.preferredRefreshRate = 0f
                 } else {
                     params.preferredRefreshRate = 60f
@@ -525,7 +568,6 @@ class MainActivity : ComponentActivity() {
         val (selectedThemeColorInt) = rememberPreference(SelectedThemeColorKey, defaultValue = DefaultThemeColor.toArgb())
         val selectedThemeColor = Color(selectedThemeColorInt)
 
-        val showChangelog = rememberSaveable { mutableStateOf(false) }
 
         var themeColor by rememberSaveable(stateSaver = ColorSaver) {
             mutableStateOf(selectedThemeColor)
@@ -590,15 +632,16 @@ class MainActivity : ComponentActivity() {
                 val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
+                // Round Wear OS displays: full-screen backgrounds (player album
+                // art) stay full-bleed, while the chrome (top bar, lists, nav,
+                // sheets, menus) is inset into the circle's inscribed square so
+                // nothing spills into the clipped corners. (1 - 1/sqrt(2)) / 2
+                // of the smallest screen dimension.
+                val roundInsets = rememberRoundScreenInsets()
+
                 val navController = rememberNavController()
 
                 LaunchedEffect(Unit) {
-                    val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
-                    val currentVersion = BuildConfig.VERSION_NAME
-                    if (lastSeenVersion != currentVersion) {
-                        showChangelog.value = true
-                    }
-
                     // SimpMusic Removal Migration
                     if (dataStore.data.first()[SimpMusicMigrationDoneKey] != true) {
                         dataStore.edit { settings ->
@@ -627,7 +670,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     dataStore.edit { settings ->
-                        settings[LastSeenVersionKey] = currentVersion
+                        settings[LastSeenVersionKey] = BuildConfig.VERSION_NAME
                     }
                 }
 
@@ -637,12 +680,13 @@ class MainActivity : ComponentActivity() {
                 val (previousTab, setPreviousTab) = rememberSaveable { mutableStateOf("home") }
 
                 val (listenTogetherInTopBar) = rememberPreference(ListenTogetherInTopBarKey, defaultValue = true)
+                val (minimalMode) = rememberPreference(MinimalModeKey, false)
                 val navigationItems =
-                    remember(listenTogetherInTopBar) {
-                        if (listenTogetherInTopBar) {
-                            Screens.MainScreens.filter { it != Screens.ListenTogether }
-                        } else {
-                            Screens.MainScreens
+                    remember(listenTogetherInTopBar, minimalMode, roundInsets.isRound) {
+                        when {
+                            minimalMode && roundInsets.isRound -> listOf(Screens.Home)
+                            listenTogetherInTopBar -> Screens.MainScreens.filter { it != Screens.ListenTogether }
+                            else -> Screens.MainScreens
                         }
                     }
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
@@ -705,10 +749,11 @@ class MainActivity : ComponentActivity() {
                     }
 
                 val shouldShowNavigationBar =
-                    remember(currentRoute, navigationItemRoutes) {
-                        currentRoute == null ||
-                            navigationItemRoutes.contains(currentRoute) ||
-                            currentRoute!!.startsWith("search/")
+                    remember(currentRoute, navigationItemRoutes, roundInsets.isRound) {
+                        !roundInsets.isRound &&
+                            (currentRoute == null ||
+                                navigationItemRoutes.contains(currentRoute) ||
+                                currentRoute!!.startsWith("search/"))
                     }
 
                 val isLandscape = configuration.containerDpSize.width > configuration.containerDpSize.height
@@ -735,10 +780,35 @@ class MainActivity : ComponentActivity() {
                             bottomInset +
                                 (if (!showRail && shouldShowNavigationBar) navPadding else 0.dp) +
                                 (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
-                                MiniPlayerHeight,
+                                MiniPlayerHeight +
+                                roundInsets.bottomBarBottom,
                         expandedBound = maxHeight,
                     )
 
+
+                // Minimal mode: the watch lives inside the player.
+                LaunchedEffect(minimalMode) {
+                    if (minimalMode && roundInsets.isRound) {
+                        playerBottomSheetState.expand(androidx.compose.animation.core.spring())
+                    }
+                }
+
+                // Tile tap: open the player; warn when remote playback can't work.
+                val fromTile = remember { intent?.getBooleanExtra("from_tile", false) == true }
+                val (tileAudioOutput) = rememberPreference(AudioOutputKey, "watch")
+                LaunchedEffect(fromTile) {
+                    if (fromTile) {
+                        playerBottomSheetState.expand(androidx.compose.animation.core.spring())
+                        if (minimalMode &&
+                            tileAudioOutput == "phone" &&
+                            !LinkSender.hasConnectedNodeQuick(this@MainActivity)
+                        ) {
+                            android.widget.Toast
+                                .makeText(this@MainActivity, R.string.minimal_tile_offline, android.widget.Toast.LENGTH_LONG)
+                                .show()
+                        }
+                    }
+                }
                 val playerAwareWindowInsets =
                     remember(
                         bottomInset,
@@ -913,12 +983,7 @@ class MainActivity : ComponentActivity() {
                     LocalShimmerTheme provides ShimmerTheme,
                     LocalSyncUtils provides syncUtils,
                     LocalListenTogetherManager provides listenTogetherManager,
-                    LocalChangelogState provides showChangelog,
                 ) {
-                    if (showChangelog.value) {
-                        ChangelogScreen(onDismiss = { showChangelog.value = false })
-                    }
-
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
@@ -927,7 +992,81 @@ class MainActivity : ComponentActivity() {
                                 enter = fadeIn(animationSpec = tween(durationMillis = 300)),
                                 exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
-                                Row {
+                                if (roundInsets.isRound) {
+                                    // Native watch header: no text title, the nav
+                                    // icons sit centered below the top curve.
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = roundInsets.topBarTop),
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Row(
+                                            modifier =
+                                                Modifier
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(
+                                                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                                                    )
+                                                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                                            horizontalArrangement =
+                                                Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                        navigationItems.forEach { screen ->
+                                            val selected = currentRoute == screen.route
+                                            IconButton(
+                                                onClick = {
+                                                    if (playerBottomSheetState.isExpanded) {
+                                                        playerBottomSheetState.collapseSoft()
+                                                    }
+                                                    navController.navigate(screen.route) {
+                                                        popUpTo(navController.graph.startDestinationId) {
+                                                            saveState = true
+                                                        }
+                                                        launchSingleTop = true
+                                                        restoreState = true
+                                                    }
+                                                },
+                                            ) {
+                                                Icon(
+                                                    painter =
+                                                        painterResource(
+                                                            if (selected) screen.iconIdActive else screen.iconIdInactive,
+                                                        ),
+                                                    contentDescription = null,
+                                                )
+                                            }
+                                        }
+                                            IconButton(onClick = { showAccountDialog = true }) {
+                                                if (accountImageUrl != null) {
+                                                    AsyncImage(
+                                                        model = accountImageUrl,
+                                                        contentDescription = stringResource(R.string.account),
+                                                        modifier =
+                                                            Modifier
+                                                                .size(24.dp)
+                                                                .clip(CircleShape),
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.account),
+                                                        contentDescription = stringResource(R.string.account),
+                                                        modifier = Modifier.size(24.dp),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                Row(
+                                    Modifier.padding(
+                                        top = roundInsets.topBarTop,
+                                        start = roundInsets.topBarHorizontal,
+                                        end = roundInsets.topBarHorizontal,
+                                    ),
+                                ) {
                                     TopAppBar(
                                         title = {
                                             Text(
@@ -936,7 +1075,7 @@ class MainActivity : ComponentActivity() {
                                             )
                                         },
                                         actions = {
-                                            if (showHistoryButton) {
+                                            if (showHistoryButton && !roundInsets.isRound) {
                                                 IconButton(onClick = { navController.navigate("history") }) {
                                                     Icon(
                                                         painter = painterResource(R.drawable.history),
@@ -944,17 +1083,11 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                 }
                                             }
-                                            IconButton(onClick = { navController.navigate("stats") }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.stats),
-                                                    contentDescription = stringResource(R.string.stats),
-                                                )
-                                            }
-                                            if (listenTogetherInTopBar) {
-                                                IconButton(onClick = { navController.navigate("listen_together_from_topbar") }) {
+                                            if (!roundInsets.isRound) {
+                                                IconButton(onClick = { navController.navigate("stats") }) {
                                                     Icon(
-                                                        painter = painterResource(R.drawable.group_outlined),
-                                                        contentDescription = stringResource(R.string.together),
+                                                        painter = painterResource(R.drawable.stats),
+                                                        contentDescription = stringResource(R.string.stats),
                                                     )
                                                 }
                                             }
@@ -986,8 +1119,8 @@ class MainActivity : ComponentActivity() {
                                         scrollBehavior = topAppBarScrollBehavior,
                                         colors =
                                             TopAppBarDefaults.topAppBarColors(
-                                                containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-                                                scrolledContainerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                                                containerColor = if (roundInsets.isRound) Color.Transparent else if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                                                scrolledContainerColor = if (roundInsets.isRound) Color.Transparent else if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
                                                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                                                 actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1002,6 +1135,7 @@ class MainActivity : ComponentActivity() {
                                                 },
                                             ),
                                     )
+                                }
                                 }
                             }
                         },
@@ -1081,7 +1215,13 @@ class MainActivity : ComponentActivity() {
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
+                                                .padding(
+                                                    bottom = roundInsets.bottomBarBottom,
+                                                    start = roundInsets.bottomBarHorizontal,
+                                                    end = roundInsets.bottomBarHorizontal,
+                                                )
                                                 .height(bottomInset + navPadding)
+                                                .clip(RoundedCornerShape(32.dp))
                                                 // Use graphicsLayer instead of offset to avoid recomposition
                                                 // graphicsLayer runs during draw phase, not composition phase
                                                 .graphicsLayer {
@@ -1151,7 +1291,12 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                     ) {
-                        Row(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = roundInsets.horizontal)
+                                .padding(top = if (roundInsets.isRound) 8.dp else 0.dp),
+                        ) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
                                 remember(navController, coroutineScope, topAppBarScrollBehavior, playerBottomSheetState) {
                                     { screen: Screens, isSelected: Boolean ->

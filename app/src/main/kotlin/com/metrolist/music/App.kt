@@ -78,11 +78,12 @@ class App :
     override fun onCreate() {
         super.onCreate()
 
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG && !resources.configuration.isScreenRound) {
             // Logs main-thread disk/network I/O and leaked resources to logcat so ANR
             // regressions are visible while developing. penaltyLog() only — never death,
             // to avoid crashing developers on pre-existing violations while we migrate
-            // away from blocking DataStore reads.
+            // away from blocking DataStore reads. Skipped on watches: the per-call
+            // logging itself costs frames on watch hardware.
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder()
                     .detectDiskReads()
@@ -128,6 +129,16 @@ class App :
         val settings = dataStore.data.first()
         val locale = Locale.getDefault()
         val languageTag = locale.language
+
+        // One-time migration: earlier watch builds force-hid video songs, which
+        // emptied search and community playlists. Videos play as audio, so they
+        // are visible again by default (the setting stays user-controllable).
+        if (settings[VideoSongsUnhideMigrationKey] != true) {
+            dataStore.edit { prefs ->
+                prefs[HideVideoSongsKey] = false
+                prefs[VideoSongsUnhideMigrationKey] = true
+            }
+        }
 
         YouTube.locale =
             YouTubeLocale(
@@ -326,7 +337,9 @@ class App :
                 components {
                     add(CrashSafeInterceptor)
                 }
-                crossfade(true)
+                // Crossfade animates every image swap; on watch GPUs that costs frames
+                // while scrolling, so plain instant draws there.
+                crossfade(!resources.configuration.isScreenRound)
                 allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
                 // Memory cache for fast image loading (prevents network requests on recomposition)
                 memoryCache {

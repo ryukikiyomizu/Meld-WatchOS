@@ -1,0 +1,234 @@
+/**
+ * Metrolist Project (C) 2026
+ * Licensed under GPL-3.0 | See git history for contributors
+ */
+
+package com.metrolist.music.utils
+
+import android.content.Context
+import android.content.res.Configuration
+import android.os.Build
+import android.util.DisplayMetrics
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+/**
+ * Global UI scale factor used to fit the phone-oriented UI onto small
+ * Wear OS watch displays (e.g. a 44mm watch with a ~450x450 px panel).
+ *
+ * A 44mm watch reports roughly 192-225dp of usable width, while the app's
+ * layouts are designed for ~360dp and up. Scaling the display density by
+ * this factor makes the app believe it has a phone-sized dp canvas while
+ * drawing every dp/sp unit at 55% of its original physical size, so the
+ * whole UI (navigation, player, lists, dialogs) shrinks proportionally
+ * and fits the watch face. 0.55 matches the "Ultra Compact" density preset.
+ */
+const val WATCH_UI_SCALE = 0.55f
+
+// Same location the "Display density" appearance setting writes to, read here
+// so the user-selected density preset still applies on top of the watch base
+// scale. SharedPreferences is used (instead of DataStore) because the value is
+// needed synchronously in Activity.attachBaseContext.
+private const val DENSITY_PREFS_FILE = "metrolist_settings"
+private const val DENSITY_SCALE_KEY = "density_scale_factor"
+
+/**
+ * Returns a context whose display density is scaled down so the UI fits on a
+ * watch display. The final scale is [WATCH_UI_SCALE] multiplied by the density
+ * preset the user picked in the appearance settings (defaults to 1.0).
+ *
+ * Applied from `Activity.attachBaseContext` so the scaled density is in place
+ * before anything is created and is picked up by the activity window, Compose
+ * layouts, dialogs, popups and menus alike.
+ */
+fun Context.withWatchUiScale(): Context {
+    val isRound =
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
+            resources.configuration.isScreenRound
+    val scale = (if (isRound) WATCH_UI_SCALE else 1f) * storedDensityScale()
+    if (scale == 1f) return this
+
+    val configuration = Configuration(resources.configuration)
+    val scaledDensityDpi =
+        (configuration.densityDpi * scale)
+            .toInt()
+            .coerceAtLeast(DisplayMetrics.DENSITY_LOW)
+    if (scaledDensityDpi == configuration.densityDpi) return this
+
+    configuration.densityDpi = scaledDensityDpi
+    return createConfigurationContext(configuration)
+}
+
+/**
+ * Density preset persisted by the "Display density" appearance setting
+ * (1.0 when the user never changed it).
+ */
+private fun Context.storedDensityScale(): Float =
+    try {
+        getSharedPreferences(DENSITY_PREFS_FILE, Context.MODE_PRIVATE)
+            .getFloat(DENSITY_SCALE_KEY, 1f)
+    } catch (e: Exception) {
+        1f
+    }
+
+/**
+ * Proportional, circle-aware insets for round Wear OS displays, following the
+ * native Wear OS layout language (Material 3 Expressive for wear, wear-os
+ * samples, Horologist responsive padding): backgrounds and scrolling content
+ * stay full-bleed and flow through the circle (the bezel clipping them is the
+ * native look), while FIXED bars are placed on vertical bands and inset
+ * horizontally by exactly the circle segment at their band, so nothing is
+ * ever clipped by the bezel.
+ *
+ *  - [topBarTop] / [topBarHorizontal]      band for the fixed top bar.
+ *  - [bottomBarBottom] / [bottomBarHorizontal]  band for the floating nav pill.
+ *  - [playerHorizontal] / [playerBottom]   keeps the player's wide title row
+ *    and its bottom controls clear of the curves.
+ *  - [horizontal] 5.2% of the width, the canonical Wear list horizontal padding.
+ *
+ * All values are 0 on rectangular displays.
+ */
+data class RoundScreenInsets(
+    val isRound: Boolean,
+    val horizontal: Dp,
+    val topBarTop: Dp,
+    val topBarHorizontal: Dp,
+    val bottomBarBottom: Dp,
+    val bottomBarHorizontal: Dp,
+    val playerHorizontal: Dp,
+    val playerBottom: Dp,
+    val playerTop: Dp,
+)
+
+/**
+ * Watch-friendly marquee: titles scroll a couple of times instead of
+ * animating forever, so scrolling lists don't pay per-frame invalidation.
+ */
+@Composable
+fun Modifier.listMarquee(): Modifier =
+    if (LocalConfiguration.current.isScreenRound) {
+        this.basicMarquee(iterations = 2)
+    } else {
+        this.basicMarquee()
+    }
+
+/**
+ * Lazy-list state tuned for round watch screens: a wider cache window
+ * pre-composes items ahead and keeps items behind, so fast scrolls never
+ * wait on composition. Phones keep the stock behaviour.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun rememberWatchLazyListState(initialFirstVisibleItemIndex: Int = 0): LazyListState {
+    val isRound = LocalConfiguration.current.isScreenRound
+    return if (isRound) {
+        rememberLazyListState(
+            cacheWindow =
+                remember {
+                    LazyLayoutCacheWindow(ahead = 600.dp, behind = 300.dp)
+                },
+            initialFirstVisibleItemIndex = initialFirstVisibleItemIndex,
+        )
+    } else {
+        rememberLazyListState(initialFirstVisibleItemIndex = initialFirstVisibleItemIndex)
+    }
+}
+
+/**
+ * Playlist header title. On round watches it sits centered, spans the
+ * circle chord at its band (full width minus the canonical list margin),
+ * and scrolls with a finite marquee when longer than that. Rectangular
+ * screens keep the classic two-line ellipsised heading.
+ */
+@Composable
+fun WatchPlaylistTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    val isRound = LocalConfiguration.current.isScreenRound
+    if (isRound) {
+        val insets = rememberRoundScreenInsets()
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = insets.horizontal + 8.dp)
+                    .listMarquee(),
+        )
+    } else {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier.padding(horizontal = 32.dp),
+        )
+    }
+}
+
+@Composable
+fun rememberRoundScreenInsets(): RoundScreenInsets {
+    val configuration = LocalConfiguration.current
+    return remember(configuration) {
+        val isRound =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                configuration.isScreenRound
+        if (isRound) {
+            val w = configuration.screenWidthDp.dp
+            val h = configuration.screenHeightDp.dp
+            val r = minOf(w, h) / 2f
+
+            // Horizontal inset needed so a view spanning [y0, y1] (measured
+            // from the top edge) stays inside the circle: the difference
+            // between the radius and the half-chord at the band's farthest
+            // edge from the center.
+            fun bandInset(y0: Dp, y1: Dp): Dp {
+                val dy = maxOf(kotlin.math.abs((r - y0).value), kotlin.math.abs((r - y1).value))
+                val halfChord = kotlin.math.sqrt(maxOf(0f, r.value * r.value - dy * dy))
+                return (r.value - halfChord).dp
+            }
+
+            val topBarTop = h * 0.14f
+            val topBarHorizontal = bandInset(topBarTop, topBarTop + 64.dp) + 4.dp
+            val bottomBarBottom = h * 0.12f
+            val bottomBarHorizontal = bandInset(h - bottomBarBottom - 72.dp, h - bottomBarBottom) + 4.dp
+
+            RoundScreenInsets(
+                isRound = true,
+                horizontal = w * 0.052f,
+                topBarTop = topBarTop,
+                topBarHorizontal = topBarHorizontal,
+                bottomBarBottom = bottomBarBottom,
+                bottomBarHorizontal = bottomBarHorizontal,
+                playerHorizontal = w * 0.10f,
+                playerBottom = h * 0.10f,
+                playerTop = h * 0.08f,
+            )
+        } else {
+            RoundScreenInsets(false, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp, 0.dp)
+        }
+    }
+}

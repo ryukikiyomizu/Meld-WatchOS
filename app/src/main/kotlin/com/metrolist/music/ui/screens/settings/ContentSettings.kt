@@ -33,6 +33,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -65,8 +66,6 @@ import com.metrolist.music.constants.EnablePaxsenixKey
 import com.metrolist.music.constants.EnableLyricsPlus
 import com.metrolist.music.constants.EnableMusixmatchKey
 import com.metrolist.music.constants.HideExplicitKey
-import com.metrolist.music.constants.HideVideoSongsKey
-import com.metrolist.music.constants.HideYoutubeShortsKey
 import com.metrolist.music.constants.LanguageCodeToName
 import com.metrolist.music.constants.LyricsProviderOrderKey
 import com.metrolist.music.constants.ProxyEnabledKey
@@ -85,6 +84,7 @@ import com.metrolist.music.constants.ShowWrappedCardKey
 import com.metrolist.music.constants.TopSize
 import com.metrolist.music.ui.component.EnumDialog
 import com.metrolist.music.ui.component.IconButton
+import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.DraggableLyricsProviderItem
@@ -92,6 +92,17 @@ import com.metrolist.music.ui.component.DraggableLyricsProviderList
 import com.metrolist.music.lyrics.LyricsProviderRegistry
 import com.metrolist.music.ui.utils.backToMain
 import com.metrolist.music.utils.rememberEnumPreference
+import androidx.compose.runtime.collectAsState
+import androidx.datastore.preferences.core.emptyPreferences
+import com.metrolist.music.constants.AutoSyncPolicyKey
+import com.metrolist.music.constants.OffloadToPhoneKey
+import com.metrolist.music.constants.WearBatterySaverKey
+import com.metrolist.music.constants.LastFullSyncKey
+import com.metrolist.music.constants.SyncAddedKey
+import com.metrolist.music.constants.SyncRemovedKey
+import com.metrolist.music.constants.SyncDeltaSkipKey
+import com.metrolist.music.constants.SyncSkipCountKey
+import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.rememberPreference
 import java.net.Proxy
 
@@ -103,12 +114,15 @@ fun ContentSettings(
     val context = LocalContext.current
     // Used only before Android 13
     val (appLanguage, onAppLanguageChange) = rememberPreference(key = AppLanguageKey, defaultValue = SYSTEM_DEFAULT)
+    val (wearSaver, onWearSaverChange) = rememberPreference(WearBatterySaverKey, false)
+    val (autoSyncPolicy, onAutoSyncPolicyChange) = rememberPreference(AutoSyncPolicyKey, "always")
+    val (offloadToPhone, onOffloadToPhoneChange) = rememberPreference(OffloadToPhoneKey, false)
+    val dsPrefs by context.dataStore.data.collectAsState(initial = emptyPreferences())
+    var showSyncPolicyDialog by remember { mutableStateOf(false) }
 
     val (contentLanguage, onContentLanguageChange) = rememberPreference(key = ContentLanguageKey, defaultValue = "system")
     val (contentCountry, onContentCountryChange) = rememberPreference(key = ContentCountryKey, defaultValue = "system")
     val (hideExplicit, onHideExplicitChange) = rememberPreference(key = HideExplicitKey, defaultValue = false)
-    val (hideVideoSongs, onHideVideoSongsChange) = rememberPreference(key = HideVideoSongsKey, defaultValue = false)
-    val (hideYoutubeShorts, onHideYoutubeShortsChange) = rememberPreference(key = HideYoutubeShortsKey, defaultValue = false)
     val (showArtistDescription, onShowArtistDescriptionChange) = rememberPreference(key = ShowArtistDescriptionKey, defaultValue = true)
     val (showArtistSubscriberCount, onShowArtistSubscriberCountChange) = rememberPreference(key = ShowArtistSubscriberCountKey, defaultValue = true)
     val (showMonthlyListeners, onShowMonthlyListenersChange) = rememberPreference(key = ShowMonthlyListenersKey, defaultValue = true)
@@ -330,214 +344,6 @@ fun ContentSettings(
         )
     }
 
-    var showProviderSelectionDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    if (showProviderSelectionDialog) {
-        AlertDialog(
-            onDismissRequest = { showProviderSelectionDialog = false },
-            title = { Text(stringResource(R.string.lyrics_provider_selection)) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.enable_lrclib))
-                            Text(
-                                text = stringResource(R.string.enable_lrclib_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = enableLrclib,
-                            onCheckedChange = onEnableLrclibChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (enableLrclib) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.enable_kugou))
-                            Text(
-                                text = stringResource(R.string.enable_kugou_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = enableKugou,
-                            onCheckedChange = onEnableKugouChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (enableKugou) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.enable_better_lyrics))
-                            Text(
-                                text = stringResource(R.string.enable_better_lyrics_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = enableBetterLyrics,
-                            onCheckedChange = onEnableBetterLyricsChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (enableBetterLyrics) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.enable_paxsenix))
-                            Text(
-                                text = stringResource(R.string.enable_paxsenix_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = enablePaxsenix,
-                            onCheckedChange = onEnablePaxsenixChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (enablePaxsenix) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.enable_lyricsplus))
-                            Text(
-                                text = stringResource(R.string.enable_lyricsplus_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = enableLyricsPlus,
-                            onCheckedChange = onEnableLyricsPlusChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (enableLyricsPlus) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.enable_musixmatch))
-                            Text(
-                                text = stringResource(R.string.enable_musixmatch_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = enableMusixmatch,
-                            onCheckedChange = onEnableMusixmatchChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (enableMusixmatch) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    }
-                    Column(modifier = Modifier.padding(2.dp)) {
-                        Text(
-                            text = stringResource(R.string.youtube_music_lyrics_note),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { showProviderSelectionDialog = false }
-                ) {
-                    Text(stringResource(R.string.close))
-                }
-            }
-        )
-    }
-
     var showQuickPicksDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -599,82 +405,6 @@ fun ContentSettings(
         )
     }
 
-    var showProviderPriorityDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    if (showProviderPriorityDialog) {
-        val currentOrder = LyricsProviderRegistry.deserializeProviderOrder(lyricsProviderOrder)
-        val defaultOrder = LyricsProviderRegistry.getDefaultProviderOrder()
-        val normalizedOrder = currentOrder.filter { it in defaultOrder } +
-            defaultOrder.filter { it !in currentOrder }
-
-        val enabledProviders = setOf(
-            "LrcLib".takeIf { enableLrclib },
-            "KuGou".takeIf { enableKugou },
-            "BetterLyrics".takeIf { enableBetterLyrics },
-            "Paxsenix".takeIf { enablePaxsenix },
-            "LyricsPlus".takeIf { enableLyricsPlus },
-            "Musixmatch".takeIf { enableMusixmatch },
-        ).filterNotNull().toSet()
-        val lyricsIcon = painterResource(R.drawable.lyrics)
-        val draggableItems = remember { mutableStateListOf<DraggableLyricsProviderItem>() }
-
-        LaunchedEffect(normalizedOrder, enableLrclib, enableKugou, enableBetterLyrics, enablePaxsenix, enableLyricsPlus, enableMusixmatch) {
-            val orderedEnabledProviders = normalizedOrder.filter { it in enabledProviders }
-            draggableItems.clear()
-            draggableItems.addAll(
-                orderedEnabledProviders.mapNotNull { providerName ->
-                    LyricsProviderRegistry.getProviderByName(providerName) ?: return@mapNotNull null
-                    DraggableLyricsProviderItem(
-                        id = providerName,
-                        name = providerDisplayNames[providerName] ?: providerName,
-                        icon = lyricsIcon,
-                    )
-                }
-            )
-        }
-
-        AlertDialog(
-            onDismissRequest = { showProviderPriorityDialog = false },
-            title = { Text(stringResource(R.string.lyrics_provider_priority)) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                ) {
-                    Text(
-                        stringResource(R.string.lyrics_provider_priority_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    DraggableLyricsProviderList(
-                        items = draggableItems,
-                        onItemsReordered = { reorderedItems ->
-                            val enabledOrder = reorderedItems.map { it.id }
-                            val disabledOrder = normalizedOrder.filter { it !in enabledProviders }
-                            onLyricsProviderOrderChange(
-                                LyricsProviderRegistry.serializeProviderOrder(enabledOrder + disabledOrder)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { showProviderPriorityDialog = false }
-                ) {
-                    Text(stringResource(R.string.close))
-                }
-            }
-        )
-    }
-
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
@@ -723,46 +453,6 @@ fun ContentSettings(
                         )
                     },
                     onClick = { onHideExplicitChange(!hideExplicit) }
-                ),
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.slow_motion_video),
-                    title = { Text(stringResource(R.string.hide_video_songs)) },
-                    trailingContent = {
-                        Switch(
-                            checked = hideVideoSongs,
-                            onCheckedChange = onHideVideoSongsChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (hideVideoSongs) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onHideVideoSongsChange(!hideVideoSongs) }
-                ),
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.hide_image),
-                    title = { Text(stringResource(R.string.hide_youtube_shorts)) },
-                    trailingContent = {
-                        Switch(
-                            checked = hideYoutubeShorts,
-                            onCheckedChange = onHideYoutubeShortsChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (hideYoutubeShorts) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) }
                 )
             )
         )
@@ -910,31 +600,6 @@ fun ContentSettings(
         Spacer(modifier = Modifier.height(27.dp))
 
         Material3SettingsGroup(
-            title = stringResource(R.string.lyrics),
-            items = listOf(
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.lyrics),
-                    title = { Text(stringResource(R.string.lyrics_provider_selection)) },
-                    description = { Text(stringResource(R.string.lyrics_provider_selection_desc)) },
-                    onClick = { showProviderSelectionDialog = true }
-                ),
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.lyrics),
-                    title = { Text(stringResource(R.string.lyrics_provider_priority)) },
-                    description = { Text(stringResource(R.string.lyrics_provider_priority_desc)) },
-                    onClick = { showProviderPriorityDialog = true }
-                ),
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.language_korean_latin),
-                    title = { Text(stringResource(R.string.lyrics_romanization)) },
-                    onClick = { navController.navigate("settings/content/romanization") }
-                )
-            )
-        )
-
-        Spacer(modifier = Modifier.height(27.dp))
-
-        Material3SettingsGroup(
             title = "Wrapped",
             items = listOf(
                 Material3SettingsItem(
@@ -1007,6 +672,120 @@ fun ContentSettings(
                 )
             )
         )
+        Spacer(modifier = Modifier.height(27.dp))
+
+        if (showSyncPolicyDialog) {
+            DefaultDialog(
+                onDismiss = { showSyncPolicyDialog = false },
+                title = { Text(stringResource(R.string.auto_sync_policy)) },
+                content = { },
+                buttons = {
+                    Column(horizontalAlignment = Alignment.Start) {
+                        listOf(
+                            "always" to stringResource(R.string.sync_policy_always),
+                            "charging" to stringResource(R.string.sync_policy_charging),
+                            "wifi" to stringResource(R.string.sync_policy_wifi),
+                            "off" to stringResource(R.string.sync_policy_off),
+                        ).forEach { (value, label) ->
+                            TextButton(
+                                onClick = {
+                                    onAutoSyncPolicyChange(value)
+                                    showSyncPolicyDialog = false
+                                },
+                            ) {
+                                Text(
+                                    text = if (value == autoSyncPolicy) "• $label" else label,
+                                    fontWeight = if (value == autoSyncPolicy) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            }
+                        }
+                    }
+                },
+            )
+        }
+
+        Material3SettingsGroup(
+            title = stringResource(R.string.wear_battery_sync),
+            items = listOf(
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.battery),
+                    title = { Text(stringResource(R.string.wear_battery_saver)) },
+                    description = { Text(stringResource(R.string.wear_battery_saver_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = wearSaver,
+                            onCheckedChange = onWearSaverChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (wearSaver) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onWearSaverChange(!wearSaver) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.sync),
+                    title = { Text(stringResource(R.string.auto_sync_policy)) },
+                    description = {
+                        Text(
+                            when (autoSyncPolicy) {
+                                "charging" -> stringResource(R.string.sync_policy_charging)
+                                "wifi" -> stringResource(R.string.sync_policy_wifi)
+                                "off" -> stringResource(R.string.sync_policy_off)
+                                else -> stringResource(R.string.sync_policy_always)
+                            }
+                        )
+                    },
+                    onClick = { showSyncPolicyDialog = true }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.phone),
+                    title = { Text(stringResource(R.string.offload_to_phone)) },
+                    description = { Text(stringResource(R.string.offload_to_phone_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = offloadToPhone,
+                            onCheckedChange = onOffloadToPhoneChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (offloadToPhone) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onOffloadToPhoneChange(!offloadToPhone) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.stats),
+                    title = { Text(stringResource(R.string.sync_stats_title)) },
+                    description = {
+                        val last = dsPrefs[LastFullSyncKey] ?: 0L
+                        val skips = (dsPrefs[SyncSkipCountKey] ?: 0) + (dsPrefs[SyncDeltaSkipKey] ?: 0)
+                        val added = dsPrefs[SyncAddedKey] ?: 0
+                        val removed = dsPrefs[SyncRemovedKey] ?: 0
+                        Text(
+                            stringResource(
+                                R.string.sync_stats,
+                                if (last > 0) java.time.Instant.ofEpochSecond(last).toString().take(16).replace("T", " ") else "—",
+                                added,
+                                removed,
+                                skips
+                            )
+                        )
+                    },
+                ),
+            )
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 
