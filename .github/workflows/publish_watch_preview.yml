@@ -177,5 +177,8 @@ jobs:
           unzip -tq /tmp/asset/meld-watchos-preview.apk > /dev/null && echo "::notice::ZIP-INTEGRITY: ok" || echo "::error::ZIP-INTEGRITY: CORRUPT"
           BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           "$BT/apksigner" verify -v /tmp/asset/meld-watchos-preview.apk 2>&1 | grep -aE "Verifies|Verified using|ERROR|WARNING|digest" | head -20 | sed 's/^/::notice::ASSET-VERIFY: /' || echo "::error::ASSET-VERIFY: FAILED"
+          jarsigner -verify -verbose:summary /tmp/asset/meld-watchos-preview.apk 2>&1 | head -8 | sed 's/^/::notice::JARSIGNER: /'
+          echo "::notice::SO-FILES: $(unzip -l /tmp/asset/meld-watchos-preview.apk | grep -a '\.so' | tr '\n' '|')"
+          echo "::notice::ARSC: $(unzip -v /tmp/asset/meld-watchos-preview.apk | grep -a 'resources.arsc' | tr -s ' ' | cut -d' ' -f2,3,8)"
           AID=$(mktemp -d)
           cd "$AID" && unzip -q /tmp/asset/meld-watchos-preview.apk META-INF/* && ls -la META-INF | sed 's/^/::notice::METAFILE: /'
