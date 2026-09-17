@@ -104,9 +104,8 @@ jobs:
           mkdir -p out
           find app/build/outputs/apk/foss/preview -name "*.apk" | head -1 | xargs -I{} cp {} out/meld-watchos-preview.apk
           cp out/meld-watchos-preview.apk out/meld-android-preview.apk
-          cp out/meld-watchos-preview.apk out/meld-watchos-preview-agp-raw.apk
           BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-          "$BT/apksigner" verify -v out/meld-watchos-preview-agp-raw.apk 2>&1 | grep -aE "Verifies|Verified using" | sed 's/^/::notice::RAW-SIGN: /'
+          "$BT/apksigner" verify -v out/meld-watchos-preview.apk 2>&1 | grep -aE "Verifies|Verified using" | sed 's/^/::notice::RAW-SIGN: /'
           ls -la out/
 
       - name: Validate APK
@@ -116,26 +115,13 @@ jobs:
           "$BT/aapt2" dump badging out/meld-watchos-preview.apk 2>&1 | grep -aE "^package:|^sdkVersion|^targetSdkVersion" | sed 's/^/::notice::BADGE: /'
           unzip -l out/meld-watchos-preview.apk | grep -aE "classes[0-9]*\.dex|assets/dexopt|META-INF/.*\.(RSA|SF|MF)" | sed 's/^/::notice::ZIP: /'
 
-      - name: Re-sign APK with v1+v2+v3
-        run: |
-          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-          KS="app/watch-preview.keystore"
-          zip -q -d out/meld-watchos-preview.apk 'META-INF/*.SF' 'META-INF/*.RSA' 'META-INF/*.DSA' 'META-INF/*.EC' 'META-INF/MANIFEST.MF' || true
-          "$BT/zipalign" -f 4 out/meld-watchos-preview.apk out/meld-watchos-preview-aligned.apk
-          "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --ks-key-alias androiddebugkey --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --min-sdk-version 26 out/meld-watchos-preview-aligned.apk
-          mv out/meld-watchos-preview-aligned.apk out/meld-watchos-preview.apk
-          cp out/meld-watchos-preview.apk out/meld-android-preview.apk
-          "$BT/apksigner" verify -v out/meld-watchos-preview.apk 2>&1 | grep -aE "Verifies|Verified using|ERROR|WARNING" | sed 's/^/::notice::SIGN: /'
-          echo "::notice::META: $(unzip -l out/meld-watchos-preview.apk | grep -a 'META-INF/.*\(RSA\|SF\|MF\)' | tr '\n' '|')"
-          echo "::notice::SHA256: $(sha256sum out/meld-watchos-preview.apk | cut -d' ' -f1)"
-
       - name: Upload APK to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="watchos-preview"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" out/meld-watchos-preview.apk out/meld-android-preview.apk out/meld-watchos-preview-agp-raw.apk --clobber
+            gh release upload "$TAG" out/meld-watchos-preview.apk out/meld-android-preview.apk --clobber
             gh release edit "$TAG" \
               --notes "Preview APK built from branch \`$GITHUB_REF_NAME\` (unmerged work — PR #1).
           Commit: ${GITHUB_SHA:0:7}
@@ -155,7 +141,7 @@ jobs:
           Install with: adb install meld-watchos-preview.apk" \
               out/meld-watchos-preview.apk \
               out/meld-android-preview.apk \
-              out/meld-watchos-preview-agp-raw.apk
+             
           fi
           echo "https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
 
