@@ -100,6 +100,7 @@ import com.metrolist.music.ui.menu.YouTubePlaylistMenu
 import com.metrolist.music.ui.menu.YouTubeSelectionSongMenu
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.WatchPlaylistTitle
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberWatchLazyListState
 import com.metrolist.music.utils.rememberPreference
@@ -506,15 +507,7 @@ private fun OnlinePlaylistHeader(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(
-            text = playlist.title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 32.dp),
-        )
+        WatchPlaylistTitle(text = playlist.title)
 
         Spacer(modifier = Modifier.height(12.dp))
 

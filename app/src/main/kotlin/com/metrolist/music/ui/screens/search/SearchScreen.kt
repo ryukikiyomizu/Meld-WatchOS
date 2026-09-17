@@ -5,8 +5,15 @@
 
 package com.metrolist.music.ui.screens.search
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -40,6 +48,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -47,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -64,6 +75,7 @@ import com.metrolist.music.constants.SearchSource
 import com.metrolist.music.constants.SearchSourceKey
 import com.metrolist.music.db.entities.SearchHistory
 import com.metrolist.music.playback.queues.YouTubeQueue
+import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.HideOnScrollFAB
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
@@ -89,11 +101,15 @@ fun SearchScreen(
     val lazyListState = rememberLazyListState()
     var isHandlingScrollToTop by remember { mutableStateOf(false) }
 
+    val isRound = LocalConfiguration.current.isScreenRound
+    var showWearSearchInput by remember { mutableStateOf(false) }
+    val wearSearchFocus = remember { FocusRequester() }
+
     val scrollToTopCount by savedStateHandle.getStateFlow("scrollToTopCount", 0).collectAsState(initial = 0)
 
     var lastHandledCount by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
-        if (!isPlayerExpanded) {
+        if (!isPlayerExpanded && !isRound) {
             kotlinx.coroutines.delay(100)
             try {
                 focusRequester.requestFocus()
@@ -109,7 +125,7 @@ fun SearchScreen(
 
             kotlinx.coroutines.delay(100)
 
-            if (!isPlayerExpanded) {
+            if (!isPlayerExpanded && !isRound) {
                 focusManager.clearFocus(force = true)
                 kotlinx.coroutines.delay(50)
                 try {
@@ -176,6 +192,56 @@ fun SearchScreen(
 
     val onSearchFromSuggestion: (String) -> Unit = { searchQuery -> handleSearch(searchQuery) }
 
+    if (isRound && showWearSearchInput) {
+        DefaultDialog(
+            onDismiss = { showWearSearchInput = false },
+            title = {
+                Text(
+                    stringResource(
+                        when (searchSource) {
+                            SearchSource.LOCAL -> R.string.search_library
+                            SearchSource.ONLINE -> R.string.search_yt_music
+                        },
+                    ),
+                )
+            },
+            content = {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .focusRequester(wearSearchFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions =
+                        KeyboardActions(
+                            onSearch = { onSearch(query.text) },
+                        ),
+                )
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(100)
+                    try {
+                        wearSearchFocus.requestFocus()
+                        keyboardController?.show()
+                    } catch (e: Exception) {
+                    }
+                }
+            },
+            buttons = {
+                TextButton(
+                    onClick = {
+                        showWearSearchInput = false
+                        onSearch(query.text)
+                    },
+                ) {
+                    Text(stringResource(R.string.search))
+                }
+            },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -184,6 +250,43 @@ fun SearchScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (isRound) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(28.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable { showWearSearchInput = true }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                contentAlignment = Alignment.CenterStart,
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.search),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                when (searchSource) {
+                                                    SearchSource.LOCAL -> R.string.search_library
+                                                    SearchSource.ONLINE -> R.string.search_yt_music
+                                                },
+                                            ),
+                                        maxLines = 1,
+                                        style =
+                                            TextStyle(
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                                fontSize = 14.sp,
+                                            ),
+                                    )
+                                }
+                            }
+                        } else {
                         BasicTextField(
                             value = query,
                             onValueChange = { query = it },
@@ -259,6 +362,7 @@ fun SearchScreen(
                                     tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
+                        }
                         }
                     }
                 },

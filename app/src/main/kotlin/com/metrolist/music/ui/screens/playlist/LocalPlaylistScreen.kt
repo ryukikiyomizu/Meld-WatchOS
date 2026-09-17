@@ -142,6 +142,7 @@ import com.metrolist.music.ui.menu.SelectionSongMenu
 import com.metrolist.music.ui.menu.SongMenu
 import com.metrolist.music.ui.screens.settings.DarkMode
 import com.metrolist.music.ui.utils.backToMain
+import com.metrolist.music.utils.WatchPlaylistTitle
 import com.metrolist.music.utils.makeTimeString
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberWatchLazyListState
@@ -1248,15 +1249,7 @@ fun LocalPlaylistHeader(
         }
 
         // Playlist Name
-        Text(
-            text = playlist.playlist.name,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 32.dp),
-        )
+        WatchPlaylistTitle(text = playlist.playlist.name)
 
         Spacer(modifier = Modifier.height(12.dp))
 

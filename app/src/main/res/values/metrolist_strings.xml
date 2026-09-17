@@ -496,6 +496,7 @@
     <string name="current_match">Current match</string>
     <string name="new_match">New match</string>
     <string name="paste_youtube_url">Paste here the new YouTube URL</string>
+    <string name="search">Search</string>
     <string name="searching">Searching…</string>
     <string name="spotify_sync_likes">Sync likes with Spotify</string>
     <string name="spotify_sync_likes_description">Replace liked songs with Spotify likes. New likes will be synced to Spotify.</string>

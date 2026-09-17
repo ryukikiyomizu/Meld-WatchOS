@@ -10,11 +10,18 @@ import android.content.res.Configuration
 import android.os.Build
 import android.util.DisplayMetrics
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
@@ -140,6 +147,45 @@ fun rememberWatchLazyListState(initialFirstVisibleItemIndex: Int = 0): LazyListS
         )
     } else {
         rememberLazyListState(initialFirstVisibleItemIndex = initialFirstVisibleItemIndex)
+    }
+}
+
+/**
+ * Playlist header title. On round watches it sits centered, spans the
+ * circle chord at its band (full width minus the canonical list margin),
+ * and scrolls with a finite marquee when longer than that. Rectangular
+ * screens keep the classic two-line ellipsised heading.
+ */
+@Composable
+fun WatchPlaylistTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    val isRound = LocalConfiguration.current.isScreenRound
+    if (isRound) {
+        val insets = rememberRoundScreenInsets()
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = insets.horizontal + 8.dp)
+                    .listMarquee(),
+        )
+    } else {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier.padding(horizontal = 32.dp),
+        )
     }
 }
 

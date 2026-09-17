@@ -81,7 +81,9 @@ import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.music.constants.AudioOutputKey
 import com.metrolist.music.constants.ListItemHeight
+import com.metrolist.music.constants.MinimalModeKey
 import com.metrolist.music.constants.VarispeedKey
 import com.metrolist.music.listentogether.ConnectionState
 import com.metrolist.music.listentogether.ListenTogetherEvent
@@ -94,6 +96,7 @@ import com.metrolist.music.ui.component.BottomSheetState
 import com.metrolist.music.ui.component.ListDialog
 import com.metrolist.music.ui.component.Material3MenuGroup
 import com.metrolist.music.ui.component.Material3MenuItemData
+import com.metrolist.music.ui.component.DefaultDialog
 import com.metrolist.music.ui.component.NewAction
 import com.metrolist.music.ui.component.NewActionGrid
 import com.metrolist.music.ui.component.VolumeSlider
@@ -371,7 +374,59 @@ fun PlayerMenu(
     val configuration = LocalConfiguration.current
     val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 
-    LazyColumn(
+    val isRound = LocalContext.current.resources.configuration.isScreenRound
+    val (minimalMode, onMinimalModeChange) = rememberPreference(MinimalModeKey, false)
+    val (audioOutput, onAudioOutputChange) = rememberPreference(AudioOutputKey, "watch")
+    var showAudioOutputDialog by remember { mutableStateOf(false) }
+
+        if (showAudioOutputDialog) {
+            DefaultDialog(
+                onDismiss = { showAudioOutputDialog = false },
+                title = { Text(stringResource(R.string.audio_output)) },
+                content = { },
+                buttons = {
+                    Column(horizontalAlignment = Alignment.Start) {
+                        (
+                            listOf(
+                                "watch" to stringResource(R.string.audio_output_watch),
+                                "phone" to stringResource(R.string.audio_output_phone),
+                            ) +
+                                if (minimalMode) {
+                                    listOf("off" to stringResource(R.string.minimal_mode_off))
+                                } else {
+                                    emptyList()
+                                }
+                        ).forEach { (value, label) ->
+                            TextButton(
+                                onClick = {
+                                    showAudioOutputDialog = false
+                                    if (value == "off") {
+                                        onMinimalModeChange(false)
+                                        coroutineScope.launch {
+                                            LinkSender.send(context.applicationContext, LinkSender.PATH_MINIMAL, "0")
+                                        }
+                                    } else {
+                                        onAudioOutputChange(value)
+                                        if (value == "phone") {
+                                            coroutineScope.launch {
+                                                LinkSender.send(context.applicationContext, LinkSender.PATH_PLAYBACK, "state")
+                                            }
+                                        }
+                                    }
+                                },
+                            ) {
+                                Text(
+                                    text = if (value == audioOutput) "\u2022 $label" else label,
+                                    fontWeight = if (value == audioOutput) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            }
+                        }
+                    }
+                },
+            )
+        }
+
+        LazyColumn(
         contentPadding =
             PaddingValues(
                 start = 0.dp,
@@ -380,6 +435,7 @@ fun PlayerMenu(
                 bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
             ),
     ) {
+
         item {
             NewActionGrid(
                 actions =
@@ -429,7 +485,50 @@ fun PlayerMenu(
                                 }
                             },
                         ),
-                    ) + if (com.metrolist.spotify.Spotify.isAuthenticated()) {
+                    ) + if (isRound) {
+                        listOf(
+                            NewAction(
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.volume_up),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                text = stringResource(R.string.audio_output),
+                                onClick = { showAudioOutputDialog = true },
+                            ),
+                            NewAction(
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.phone),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                                text = stringResource(R.string.minimal_mode),
+                                onClick = {
+                                    onDismiss()
+                                    val on = !minimalMode
+                                    // Flip immediately, then verify the peer got it; revert if not.
+                                    onMinimalModeChange(on)
+                                    coroutineScope.launch {
+                                        val result = LinkSender.send(context.applicationContext, LinkSender.PATH_MINIMAL, if (on) "1" else "0")
+                                        if (on && result.wearableReady && result.nodesFound == 0) {
+                                            onMinimalModeChange(false)
+                                            android.widget.Toast
+                                                .makeText(context, R.string.minimal_connect_required, android.widget.Toast.LENGTH_LONG)
+                                                .show()
+                                        }
+                                    }
+                                },
+                            ),
+                        )
+                    } else {
+                        emptyList()
+                    } + if (com.metrolist.spotify.Spotify.isAuthenticated()) {
                         listOf(
                             NewAction(
                                 icon = {
@@ -447,7 +546,7 @@ fun PlayerMenu(
                     } else {
                         emptyList()
                     },
-                columns = if (isListenTogetherGuest) 2 else 3,
+                columns = if (isListenTogetherGuest || isRound) 2 else 3,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 16.dp),
             )
         }
