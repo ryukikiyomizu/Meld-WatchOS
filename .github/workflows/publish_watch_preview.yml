@@ -174,5 +174,7 @@ jobs:
           echo "::notice::ASSET-SHA256: $(sha256sum /tmp/asset/meld-watchos-preview.apk | cut -d' ' -f1)"
           echo "::notice::ASSET-SIZE: $(stat -c%s /tmp/asset/meld-watchos-preview.apk)"
           unzip -tq /tmp/asset/meld-watchos-preview.apk > /dev/null && echo "::notice::ZIP-INTEGRITY: ok" || echo "::error::ZIP-INTEGRITY: CORRUPT"
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" verify -v --print-certs /tmp/asset/meld-watchos-preview.apk 2>&1 | grep -aE "Verifies|Verified using|ERROR" | sed 's/^/::notice::ASSET-VERIFY: /' || echo "::error::ASSET-VERIFY: FAILED"
           AID=$(mktemp -d)
           cd "$AID" && unzip -q /tmp/asset/meld-watchos-preview.apk META-INF/* && ls -la META-INF | sed 's/^/::notice::METAFILE: /'
