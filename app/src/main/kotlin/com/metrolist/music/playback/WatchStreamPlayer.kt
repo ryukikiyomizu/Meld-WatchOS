@@ -7,6 +7,8 @@ package com.metrolist.music.playback
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -36,6 +38,7 @@ object StreamBridge {
 object WatchStreamPlayer {
     private const val STREAM_URI = "meldstream://live"
 
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var player: ExoPlayer? = null
     private var sessionTrackId: String? = null
 
@@ -47,26 +50,28 @@ object WatchStreamPlayer {
             .createMediaSource(MediaItem.fromUri(Uri.parse(STREAM_URI)))
 
     fun start(context: Context) {
-        if (player != null) return
-        try {
-            val exo =
-                ExoPlayer
-                    .Builder(context)
-                    .build()
-            exo.addListener(
-                object : Player.Listener {
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        isPlayingFlow.value = isPlaying
-                    }
-                },
-            )
-            exo.setMediaSource(mediaSource(context))
-            exo.prepare()
-            exo.play()
-            player = exo
-            Timber.d("WatchStreamPlayer: started")
-        } catch (e: Exception) {
-            Timber.w(e, "WatchStreamPlayer: start failed")
+        mainHandler.post {
+            if (player != null) return@post
+            try {
+                val exo =
+                    ExoPlayer
+                        .Builder(context)
+                        .build()
+                exo.addListener(
+                    object : Player.Listener {
+                        override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            isPlayingFlow.value = isPlaying
+                        }
+                    },
+                )
+                exo.setMediaSource(mediaSource(context))
+                exo.prepare()
+                exo.play()
+                player = exo
+                Timber.d("WatchStreamPlayer: started")
+            } catch (e: Exception) {
+                Timber.w(e, "WatchStreamPlayer: start failed")
+            }
         }
     }
 
@@ -77,29 +82,35 @@ object WatchStreamPlayer {
     ) {
         if (sessionTrackId == trackId) return
         sessionTrackId = trackId
-        val exo = player ?: return
-        try {
-            exo.setMediaSource(mediaSource(context))
-            exo.prepare()
-            exo.play()
-        } catch (e: Exception) {
-            Timber.w(e, "WatchStreamPlayer: restart failed")
+        mainHandler.post {
+            val exo = player ?: return@post
+            try {
+                exo.setMediaSource(mediaSource(context))
+                exo.prepare()
+                exo.play()
+            } catch (e: Exception) {
+                Timber.w(e, "WatchStreamPlayer: restart failed")
+            }
         }
     }
 
     fun toggle() {
-        val exo = player ?: return
-        if (exo.isPlaying) exo.pause() else exo.play()
+        mainHandler.post {
+            val exo = player ?: return@post
+            if (exo.isPlaying) exo.pause() else exo.play()
+        }
     }
 
     fun stop() {
-        try {
-            player?.release()
-        } catch (_: Exception) {
-        }
-        player = null
         sessionTrackId = null
         isPlayingFlow.value = false
+        mainHandler.post {
+            try {
+                player?.release()
+            } catch (_: Exception) {
+            }
+            player = null
+        }
     }
 
     /**

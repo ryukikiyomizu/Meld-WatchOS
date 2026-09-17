@@ -7,6 +7,8 @@ package com.metrolist.music.playback
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.os.Handler
+import android.os.Looper
 import androidx.media3.common.Player
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.ChannelClient
@@ -23,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -38,6 +41,7 @@ object AudioStreamPump {
     const val CHANNEL_PATH = "/meld/audio"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var pumpJob: Job? = null
     private var channel: ChannelClient.Channel? = null
     private var activeVideoId: String? = null
@@ -77,11 +81,16 @@ object AudioStreamPump {
     ) {
         pumpJob?.cancel()
         pumpJob = null
-        closeChannel(context)
-        player?.volume = 1f
-        playerListener?.let { player?.removeListener(it) }
-        playerListener = null
         activeVideoId = null
+        val listener = playerListener
+        playerListener = null
+        mainHandler.post {
+            player?.volume = 1f
+            if (listener != null && player != null) {
+                player.removeListener(listener)
+            }
+        }
+        closeChannel(context)
     }
 
     private suspend fun restart(
@@ -92,8 +101,10 @@ object AudioStreamPump {
         pumpJob?.cancel()
         closeChannel(context)
         activeVideoId = videoId
-        player.volume = 0f
-        ensurePlayPauseListener(context, player)
+        withContext(Dispatchers.Main) {
+            player.volume = 0f
+            ensurePlayPauseListener(context, player)
+        }
 
         val quality =
             try {
