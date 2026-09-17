@@ -149,6 +149,7 @@ android {
         create("preview") {
             initWith(getByName("release"))
             matchingFallbacks += listOf("release")
+            signingConfig = signingConfigs.getByName("preview")
         }
         debug {
             if (applicationIdOverride == null) {

@@ -64,7 +64,11 @@ jobs:
           path: app/watch-preview.keystore
           key: ${{ steps.preview_keystore.outputs.cache-primary-key }}
 
-      - name: Build FOSS Debug APK (no lint, no tests)
+      - name: Show signing report
+        run: |
+          ./gradlew --console=plain :app:signingReport 2>&1 | grep -aA 8 -i "preview" | head -40 | tr -d '\r' | sed 's/^/::notice::SIGNREP: /' || true
+
+      - name: Build FOSS Preview APK (no lint, no tests)
         run: |
           set -o pipefail
           ./gradlew --console=plain assembleFossPreview -x lint -x lintFossPreview --warning-mode summary --stacktrace 2>&1 | tee /tmp/gradle_build.log
