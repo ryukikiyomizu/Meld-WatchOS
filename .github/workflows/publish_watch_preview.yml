@@ -113,6 +113,18 @@ jobs:
           "$BT/aapt2" dump badging out/meld-watchos-preview.apk 2>&1 | grep -aE "^package:|^sdkVersion|^targetSdkVersion" | sed 's/^/::notice::BADGE: /'
           unzip -l out/meld-watchos-preview.apk | grep -aE "classes[0-9]*\.dex|assets/dexopt|META-INF/.*\.(RSA|SF|MF)" | sed 's/^/::notice::ZIP: /'
 
+      - name: Re-sign APK with v1+v2+v3
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          KS="app/watch-preview.keystore"
+          "$BT/zipalign" -f 4 out/meld-watchos-preview.apk out/meld-watchos-preview-aligned.apk
+          "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --ks-key-alias androiddebugkey --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true out/meld-watchos-preview-aligned.apk
+          mv out/meld-watchos-preview-aligned.apk out/meld-watchos-preview.apk
+          cp out/meld-watchos-preview.apk out/meld-android-preview.apk
+          "$BT/apksigner" verify --print-certs out/meld-watchos-preview.apk | sed 's/^/::notice::SIGN: /'
+          echo "::notice::META: $(unzip -l out/meld-watchos-preview.apk | grep -a 'META-INF/.*\(RSA\|SF\|MF\)' | tr '\n' '|')"
+          echo "::notice::SHA256: $(sha256sum out/meld-watchos-preview.apk | cut -d' ' -f1)"
+
       - name: Upload APK to release
         env:
           GH_TOKEN: ${{ github.token }}
