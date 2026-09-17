@@ -1,0 +1,39 @@
+name: Inspect Released APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/01a09e33-meld-watchos
+    paths:
+      - .github/workflows/inspect_asset.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download released asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/asset
+          gh release download watchos-preview -p meld-watchos-preview.apk -D /tmp/asset -R "$GITHUB_REPOSITORY"
+          ls -la /tmp/asset
+
+      - name: Full signature inspection
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          A=/tmp/asset/meld-watchos-preview.apk
+          echo "::notice::1-SHA256: $(sha256sum $A | cut -d' ' -f1)"
+          "$BT/apksigner" verify -v "$A" > /tmp/av.txt 2>&1 || true
+          echo "::notice::2-APKSIGNER-A: $(head -c 700 /tmp/av.txt | tr '\n' '|')"
+          echo "::notice::3-APKSIGNER-B: $(tail -c 700 /tmp/av.txt | tr '\n' '|')"
+          (jarsigner -verify -verbose "$A" > /tmp/js.txt 2>&1 || true)
+          echo "::notice::4-JARSIGNER: $(grep -aE 'jar verified|jar is unsigned|digest|signature' /tmp/js.txt | head -6 | tr '\n' '|')"
+          echo "::notice::5-JSHEAD: $(head -4 /tmp/js.txt | tr '\n' '|')"
+          echo "::notice::6-SO-AND-ARSC: $(unzip -v $A | grep -aE '\.so$|resources\.arsc' | tr -s ' ' | cut -d' ' -f2,8 | tr '\n' '|')"
+          echo "::notice::7-META-INF: $(unzip -l $A | grep -a META-INF | awk '{print $4}' | tr '\n' '|')"
+          echo "::notice::8-TOPLEVEL: $(unzip -l $A | awk '{print $4}' | grep -aE '^[^/]+$' | tr '\n' '|')"
