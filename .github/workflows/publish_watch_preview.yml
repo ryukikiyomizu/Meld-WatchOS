@@ -102,6 +102,13 @@ jobs:
           cp out/meld-watchos-preview.apk out/meld-android-preview.apk
           ls -la out/
 
+      - name: Validate APK
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" verify --print-certs out/meld-watchos-preview.apk 2>&1 | sed 's/^/::notice::SIGN: /' || echo "::error::apksigner verify FAILED"
+          "$BT/aapt2" dump badging out/meld-watchos-preview.apk 2>&1 | grep -aE "^package:|^sdkVersion|^targetSdkVersion" | sed 's/^/::notice::BADGE: /'
+          unzip -l out/meld-watchos-preview.apk | grep -aE "classes[0-9]*\.dex|assets/dexopt|META-INF/.*\.(RSA|SF|MF)" | sed 's/^/::notice::ZIP: /'
+
       - name: Upload APK to release
         env:
           GH_TOKEN: ${{ github.token }}
